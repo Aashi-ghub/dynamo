@@ -1,25 +1,43 @@
+import { Amplify } from 'aws-amplify';
+import { signIn, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import type { User } from '../types';
 
-export const authService = {
-  async login(email: string, password: string):Promise<{token: string; user: User}> {
-    // In a real implementation this would contact Cognito directly using AWS Amplify or similar,
-    // or call a proxy endpoint in API Gateway. We're mocking the success response here
-    // for architectural demonstration since the actual Cognito setup is external.
-    // 
-    // const response = await api.post('/auth/login', { email, password });
-    // return response.data;
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || 'us-east-1_dummy',
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || 'dummy',
+    }
+  }
+});
 
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email === 'admin@example.com' && password === 'password') {
-          resolve({
-            token: 'mock-jwt-token-12345',
-            user: { id: 'u1', name: 'Admin User', email: 'admin@example.com' }
-          });
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 1000);
-    });
+export const authService = {
+  async login(email: string, password: string): Promise<{token: string; user: User}> {
+    await signIn({ username: email, password });
+    const user = await getCurrentUser();
+    const session = await fetchAuthSession();
+    const token = session.tokens?.accessToken?.toString() || '';
+    return {
+      token,
+      user: { id: user.userId, name: user.username, email: email }
+    };
+  },
+
+  async logout(): Promise<void> {
+    await signOut();
+  },
+
+  async getSession(): Promise<{token: string; user: User} | null> {
+    try {
+      const user = await getCurrentUser();
+      const session = await fetchAuthSession();
+      const token = session.tokens?.accessToken?.toString() || '';
+      return {
+        token,
+        user: { id: user.userId, name: user.username, email: user.username }
+      };
+    } catch {
+      return null;
+    }
   }
 };

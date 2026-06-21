@@ -1,27 +1,63 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- Toolbar -->
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white">
-      <div class="flex items-center space-x-4 flex-1">
-        <h2 class="text-lg font-medium text-gray-900">{{ activeEntity.plural }}</h2>
-        <div class="relative max-w-sm w-full">
-          <input
-            type="text"
-            v-model="searchInput"
-            @input="onSearch"
-            :placeholder="`Search ${activeEntity.plural.toLowerCase()}...`"
-            class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
-          />
+    <div class="px-6 py-4 border-b border-gray-200 bg-white">
+      <div class="flex flex-col space-y-4 w-full">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-medium text-gray-900">{{ activeEntity.plural }}</h2>
+          <div class="flex items-center space-x-3">
+            <button @click="fetchData" class="p-2 text-gray-400 hover:text-gray-500 transition-colors" title="Refresh">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+            <button @click="openCreateModal"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+              Create {{ activeEntity.name }}
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="flex items-center space-x-3">
-        <button @click="fetchData" class="p-2 text-gray-400 hover:text-gray-500 transition-colors" title="Refresh">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        </button>
-        <button @click="openCreateModal"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
-          Create {{ activeEntity.name }}
-        </button>
+        <div class="flex flex-wrap gap-4 items-end">
+          <!-- Search -->
+          <div class="flex-1 min-w-[200px] max-w-sm">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+            <input
+              type="text"
+              v-model="searchInput"
+              @input="onSearch"
+              :placeholder="`Search...`"
+              class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+            />
+          </div>
+          <!-- Status Filter -->
+          <div class="w-48">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+            <select v-model="entityStore.tableState.status" @change="onFilterChange" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white">
+              <option :value="undefined">All Statuses</option>
+              <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <!-- Company Name Filter -->
+          <div class="w-64">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Company</label>
+            <input
+              type="text"
+              v-model="companyInput"
+              @input="onCompanySearch"
+              placeholder="Company Name..."
+              class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+            />
+          </div>
+          <!-- Date Range Filter -->
+          <div class="flex items-center space-x-2">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+              <input type="date" v-model="entityStore.tableState.startDate" @change="onFilterChange" class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+              <input type="date" v-model="entityStore.tableState.endDate" @change="onFilterChange" class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -77,9 +113,7 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button @click="openViewModal(record)" class="text-primary-600 hover:text-primary-900 mr-3 transition-colors">View</button>
-              <button @click="openEditModal(record)" class="text-indigo-600 hover:text-indigo-900 mr-3 transition-colors">Edit</button>
-              <button @click="openDeleteModal(record)" class="text-red-600 hover:text-red-900 transition-colors">Delete</button>
+              <button @click="openViewModal(record)" class="text-primary-600 hover:text-primary-900 transition-colors">View</button>
             </td>
           </tr>
         </tbody>
@@ -111,6 +145,17 @@
       @save="handleSave"
       @delete="handleDelete"
     />
+
+    <RecordDetailView
+      v-if="detailState.isOpen"
+      :entity="activeEntity"
+      :record="detailState.record"
+      :loading="detailState.loading"
+      :error="detailState.error"
+      @close="closeDetailView"
+      @edit="openEditFromDetail"
+      @delete="openDeleteFromDetail"
+    />
   </div>
 </template>
 
@@ -119,6 +164,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useEntityStore } from '../stores/entityStore';
 import { entityService } from '../services/entityService';
 import EntityModal from '../components/EntityModal.vue';
+import RecordDetailView from '../components/RecordDetailView.vue';
 import { debounce } from '../utils/debounce';
 
 const entityStore = useEntityStore();
@@ -128,11 +174,19 @@ const records = ref<any[]>([]);
 const totalRecords = ref(0);
 const loading = ref(false);
 const searchInput = ref('');
+const companyInput = ref('');
 
 // Modal state
 const modalState = ref({
   isOpen: false,
-  mode: 'view' as 'create' | 'view' | 'edit' | 'delete',
+  mode: 'create' as 'create' | 'edit' | 'delete',
+  record: null as any
+});
+
+const detailState = ref({
+  isOpen: false,
+  loading: false,
+  error: '',
   record: null as any
 });
 
@@ -155,6 +209,22 @@ const onSearch = debounce(() => {
   entityStore.tableState.page = 1;
   fetchData();
 }, 300);
+
+const onCompanySearch = debounce(() => {
+  entityStore.tableState.companyName = companyInput.value;
+  entityStore.tableState.page = 1;
+  fetchData();
+}, 300);
+
+const onFilterChange = () => {
+  entityStore.tableState.page = 1;
+  fetchData();
+};
+
+const statusOptions = computed(() => {
+  const statusField = activeEntity.value.fields.find(f => f.key === 'status');
+  return statusField?.options || [];
+});
 
 const sortBy = (key: string) => {
   if (entityStore.tableState.sortBy === key) {
@@ -185,8 +255,23 @@ const openCreateModal = () => {
   modalState.value = { isOpen: true, mode: 'create', record: {} };
 };
 
-const openViewModal = (record: any) => {
-  modalState.value = { isOpen: true, mode: 'view', record: { ...record } };
+const openViewModal = async (record: any) => {
+  detailState.value = {
+    isOpen: true,
+    loading: true,
+    error: '',
+    record: null
+  };
+
+  try {
+    const detailRecord = await entityService.fetchRecordById(activeEntity.value.apiPath, record.id);
+    detailState.value.record = detailRecord;
+  } catch (error) {
+    console.error("Failed to fetch record details", error);
+    detailState.value.error = `Failed to load ${activeEntity.value.name.toLowerCase()} details.`;
+  } finally {
+    detailState.value.loading = false;
+  }
 };
 
 const openEditModal = (record: any) => {
@@ -201,13 +286,33 @@ const closeModal = () => {
   modalState.value.isOpen = false;
 };
 
+const closeDetailView = () => {
+  detailState.value = {
+    isOpen: false,
+    loading: false,
+    error: '',
+    record: null
+  };
+};
+
+const openEditFromDetail = (record: any) => {
+  openEditModal(record);
+};
+
+const openDeleteFromDetail = (record: any) => {
+  openDeleteModal(record);
+};
+
 const handleSave = async (data: any) => {
   loading.value = true;
   try {
     if (modalState.value.mode === 'create') {
       await entityService.createRecord(activeEntity.value.apiPath, data);
     } else {
-      await entityService.updateRecord(activeEntity.value.apiPath, data.id, data);
+      const updatedRecord = await entityService.updateRecord(activeEntity.value.apiPath, data.id, data);
+      if (detailState.value.isOpen) {
+        detailState.value.record = updatedRecord;
+      }
     }
     closeModal();
     fetchData();
@@ -223,6 +328,7 @@ const handleDelete = async () => {
   try {
     await entityService.deleteRecord(activeEntity.value.apiPath, modalState.value.record.id);
     closeModal();
+    closeDetailView();
     fetchData();
   } catch (error) {
     console.error("Failed to delete", error);
@@ -234,6 +340,9 @@ const handleDelete = async () => {
 // Watch for entity change to refetch data
 watch(() => activeEntity.value.id, () => {
   searchInput.value = '';
+  companyInput.value = '';
+  closeDetailView();
+  closeModal();
   fetchData();
 });
 

@@ -44,7 +44,6 @@
             {{ loading ? 'Signing in...' : 'Sign in' }}
           </button>
         </div>
-        <p class="text-xs text-center text-gray-500">Demo login: admin@example.com / password</p>
       </form>
     </div>
   </div>
@@ -56,8 +55,8 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
 
-const email = ref('admin@example.com');
-const password = ref('password');
+const email = ref('');
+const password = ref('');
 const error = ref('');
 const loading = ref(false);
 

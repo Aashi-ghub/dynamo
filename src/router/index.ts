@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
+import { authService } from '../services/authService';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -29,8 +30,16 @@ const router = createRouter({
   ]
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
+
+  if (!authStore.isAuthenticated) {
+    const session = await authService.getSession();
+    if (session) {
+      authStore.setAuth(session.token, session.user);
+    }
+  }
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
   } else if (to.path === '/login' && authStore.isAuthenticated) {

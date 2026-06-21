@@ -13,7 +13,11 @@ export const useEntityStore = defineStore('entity', () => {
     limit: 10,
     search: '',
     sortBy: null,
-    sortDesc: false
+    sortDesc: false,
+    startDate: undefined,
+    endDate: undefined,
+    status: undefined,
+    companyName: undefined
   });
 
   function setActiveEntity(id: string) {
@@ -24,6 +28,10 @@ export const useEntityStore = defineStore('entity', () => {
       tableState.search = '';
       tableState.sortBy = null;
       tableState.sortDesc = false;
+      tableState.startDate = undefined;
+      tableState.endDate = undefined;
+      tableState.status = undefined;
+      tableState.companyName = undefined;
     }
   }
 

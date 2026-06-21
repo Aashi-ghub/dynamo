@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { User } from '../types';
+import { authService } from '../services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
@@ -14,7 +15,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('token', newToken);
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.error(e);
+    }
     token.value = null;
     user.value = null;
     localStorage.removeItem('token');

@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="fixed z-50 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
       
       <!-- Background overlay -->
@@ -7,26 +7,28 @@
 
       <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-      <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+      <div class="relative z-10 inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
         
         <!-- Header -->
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
             {{ modeTitle }}
           </h3>
-          <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500 transition-colors">
-            <span class="sr-only">Close</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div class="flex items-center space-x-2">
+            <button @click="$emit('close')" class="text-gray-400 hover:text-gray-500 transition-colors">
+              <span class="sr-only">Close</span>
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- Delete Confirmation -->
-        <div v-if="mode === 'delete'">
+        <div v-if="props.mode === 'delete'">
           <div class="mt-2">
             <p class="text-sm text-gray-500">
-              Are you sure you want to delete this {{ entity.name.toLowerCase() }}? This action cannot be undone.
+              Are you sure you want to delete this {{ props.entity.name.toLowerCase() }}? This action cannot be undone.
             </p>
           </div>
           <div class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
@@ -42,12 +44,12 @@
         <!-- Create / Edit / View Form -->
         <form v-else @submit.prevent="submitForm">
           <div class="space-y-4">
-            <div v-for="field in entity.fields" :key="field.key">
+            <div v-for="field in props.entity.fields" :key="field.key">
               <label :for="field.key" class="block text-sm font-medium text-gray-700">{{ field.label }} <span v-if="field.required" class="text-red-500">*</span></label>
               
               <!-- View Mode -->
-              <div v-if="mode === 'view'" class="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
-                {{ formData[field.key] || '-' }}
+              <div v-if="props.mode === 'view'" class="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900">
+                {{ field.type === 'date' && formData[field.key] ? new Date(formData[field.key]).toLocaleDateString() : (formData[field.key] || '-') }}
               </div>
               
               <!-- Edit / Create Mode -->
@@ -73,7 +75,7 @@
             </div>
           </div>
           
-          <div v-if="mode !== 'view'" class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+          <div v-if="props.mode !== 'view'" class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
             <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
               Save
             </button>
@@ -94,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { EntityConfig } from '../types';
 
 const props = defineProps<{
@@ -105,7 +107,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'save', 'delete']);
 
-const formData = ref<any>({});
+const formData = ref<any>(props.record ? { ...props.record } : {});
 
 const modeTitle = computed(() => {
   if (props.mode === 'create') return `Create ${props.entity.name}`;
@@ -115,13 +117,13 @@ const modeTitle = computed(() => {
   return '';
 });
 
-onMounted(() => {
-  if (props.record) {
-    formData.value = { ...props.record };
+watch(() => props.record, (newRecord) => {
+  if (newRecord) {
+    formData.value = { ...newRecord };
   } else {
     formData.value = {};
   }
-});
+}, { deep: true, immediate: true });
 
 const submitForm = () => {
   emit('save', formData.value);

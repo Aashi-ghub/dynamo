@@ -29,6 +29,10 @@ export interface TableState {
   search: string;
   sortBy: string | null;
   sortDesc: boolean;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  companyName?: string;
 }
 
 export interface PaginatedResponse<T> {
