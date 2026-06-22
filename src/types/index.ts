@@ -38,6 +38,7 @@ export interface EntityConfig {
     company?: string;
     date?: string;
   };
+  sortableFields?: string[];
 }
 
 export interface TableState {

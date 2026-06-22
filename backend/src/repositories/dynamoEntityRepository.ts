@@ -2,7 +2,6 @@ import {
   DeleteCommand,
   GetCommand,
   PutCommand,
-  QueryCommand,
   ScanCommand,
   UpdateCommand,
   type DynamoDBDocumentClient
@@ -30,10 +29,13 @@ export class DynamoEntityRepository {
   }
 
   async list(query: ListQuery): Promise<PageResult<BusinessRecord>> {
-    const commandInput = this.buildListCommand(query);
-    const result = commandInput.useQuery
-      ? await this.client.send(new QueryCommand(commandInput.input))
-      : await this.client.send(new ScanCommand(commandInput.input));
+    const searchField = this.resolveSearchField(query);
+    if (query.search && searchField) {
+      return this.listWithCaseInsensitiveSearch(query, searchField);
+    }
+
+    const input = this.buildListCommand(query).input;
+    const result = await this.client.send(new ScanCommand(input));
     return {
       items: (result.Items as BusinessRecord[]) || [],
       nextToken: encodeNextToken(result.LastEvaluatedKey)
@@ -136,17 +138,6 @@ export class DynamoEntityRepository {
     const names: Record<string, string> = {};
     const values: Record<string, unknown> = {};
     const filterParts: string[] = [];
-    let indexName: string | undefined;
-    let keyExpression: string | undefined;
-
-    const searchIndex = this.resolveSearchIndex(query.searchField, query.search);
-
-    if (searchIndex && query.search) {
-      indexName = searchIndex.indexName;
-      names['#searchPk'] = searchIndex.partitionKey;
-      values[':search'] = query.search;
-      keyExpression = '#searchPk = :search';
-    }
 
     for (const [field, value] of Object.entries(query.filters)) {
       const rawField = this.toDynamoField(field);
@@ -177,23 +168,98 @@ export class DynamoEntityRepository {
 
     const input = {
       TableName: this.config.tableName,
-      IndexName: indexName,
-      KeyConditionExpression: keyExpression,
       FilterExpression: filterParts.length ? filterParts.join(' AND ') : undefined,
       ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
       ExpressionAttributeValues: Object.keys(values).length ? values : undefined,
       Limit: query.pageSize,
       ExclusiveStartKey: decodeNextToken(query.nextToken),
-      ScanIndexForward: query.sortDirection === 'ASC',
       ProjectionExpression: projectedRawFields.map((_field, index) => `#proj_${index}`).join(', ')
     };
-    return { useQuery: Boolean(keyExpression), input };
+    return { input };
   }
 
-  private resolveSearchIndex(searchField?: string, search?: string) {
-    if (!search) return undefined;
-    const field = searchField || Object.keys(this.config.searchableFields)[0];
-    return this.config.searchIndexes[field];
+  private resolveSearchField(query: ListQuery) {
+    if (!query.search) return undefined;
+    const field = query.searchField || Object.keys(this.config.searchIndexes)[0];
+    if (field && Object.hasOwn(this.config.searchIndexes, field)) return field;
+    return undefined;
+  }
+
+  private matchesCaseInsensitiveSearch(item: BusinessRecord, searchField: string, needle: string) {
+    const rawField = this.toDynamoField(searchField);
+    const value = item[rawField];
+    if (value === null || value === undefined) return false;
+    return String(value).toLowerCase().includes(needle);
+  }
+
+  private decodeSearchCursor(token?: string) {
+    if (!token) return { pendingMatches: [] as BusinessRecord[] };
+    const decoded = decodeNextToken(token);
+    if ('pendingMatches' in decoded || 'exclusiveStartKey' in decoded) {
+      return {
+        exclusiveStartKey: decoded.exclusiveStartKey as Record<string, unknown> | undefined,
+        pendingMatches: (decoded.pendingMatches as BusinessRecord[]) || []
+      };
+    }
+    return { exclusiveStartKey: decoded, pendingMatches: [] as BusinessRecord[] };
+  }
+
+  private encodeSearchCursor(cursor: {
+    exclusiveStartKey?: Record<string, unknown>;
+    pendingMatches: BusinessRecord[];
+  }) {
+    const payload: Record<string, unknown> = {};
+    if (cursor.exclusiveStartKey && Object.keys(cursor.exclusiveStartKey).length > 0) {
+      payload.exclusiveStartKey = cursor.exclusiveStartKey;
+    }
+    if (cursor.pendingMatches.length > 0) {
+      payload.pendingMatches = cursor.pendingMatches;
+    }
+    if (Object.keys(payload).length === 0) return undefined;
+    return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  }
+
+  private async listWithCaseInsensitiveSearch(query: ListQuery, searchField: string) {
+    const needle = query.search!.toLowerCase();
+    const cursor = this.decodeSearchCursor(query.nextToken);
+    const items: BusinessRecord[] = [];
+    const pending = [...cursor.pendingMatches];
+    let exclusiveStartKey = cursor.exclusiveStartKey;
+
+    while (items.length < query.pageSize && pending.length > 0) {
+      items.push(pending.shift()!);
+    }
+
+    const scanBatchSize = Math.min(Math.max(query.pageSize * 10, 50), 500);
+    const maxRounds = 50;
+
+    for (let round = 0; items.length < query.pageSize && round < maxRounds; round++) {
+      const input = this.buildListCommand({ ...query, search: undefined, nextToken: undefined }).input;
+      input.Limit = scanBatchSize;
+      input.ExclusiveStartKey = exclusiveStartKey;
+
+      const result = await this.client.send(new ScanCommand(input));
+      const batch = (result.Items as BusinessRecord[]) || [];
+      exclusiveStartKey = result.LastEvaluatedKey;
+
+      for (const item of batch) {
+        if (!this.matchesCaseInsensitiveSearch(item, searchField, needle)) continue;
+        if (items.length < query.pageSize) {
+          items.push(item);
+        } else {
+          pending.push(item);
+        }
+      }
+
+      if (!exclusiveStartKey) break;
+      if (items.length >= query.pageSize) break;
+    }
+
+    const hasMore = pending.length > 0 || Boolean(exclusiveStartKey);
+    return {
+      items,
+      nextToken: hasMore ? this.encodeSearchCursor({ exclusiveStartKey, pendingMatches: pending }) : undefined
+    };
   }
 
   private toDynamoField(frontendField: string) {

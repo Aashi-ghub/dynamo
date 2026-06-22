@@ -31,7 +31,8 @@
                 type="text"
                 v-model="searchInput"
                 @input="onSearch"
-                :placeholder="`Search ${selectedSearchLabel}`"
+                @keyup.enter="applySearchFilter"
+                :placeholder="`Search ${selectedSearchLabel}...`"
                 class="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
               />
             </div>
@@ -81,8 +82,11 @@
           <thead class="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th v-for="col in activeEntity.columns" :key="col.key" scope="col"
-                  class="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                  @click="sortBy(col.key)">
+                  :class="[
+                    'px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider transition-colors',
+                    isColumnSortable(col.key) ? 'cursor-pointer hover:bg-gray-100' : ''
+                  ]"
+                  @click="isColumnSortable(col.key) && sortBy(col.key)">
                 <div class="flex items-center space-x-1">
                   <span>{{ col.label }}</span>
                   <span v-if="entityStore.tableState.sortBy === col.key" class="text-primary-600">
@@ -191,6 +195,7 @@ const currentPageIndex = ref(0);
 const hasNextPage = ref(false);
 let fetchController: AbortController | null = null;
 let lastFetchKey = '';
+let fetchSeq = 0;
 
 const modalState = ref({
   isOpen: false,
@@ -244,6 +249,7 @@ const fetchData = async (force = false) => {
   fetchController?.abort();
   fetchController = new AbortController();
   const { signal } = fetchController;
+  const seq = ++fetchSeq;
 
   loading.value = true;
   try {
@@ -253,6 +259,7 @@ const fetchData = async (force = false) => {
       pageToken,
       signal
     );
+    if (seq !== fetchSeq) return;
     records.value = res.data;
     hasNextPage.value = res.hasMore;
     if (res.nextToken) {
@@ -263,10 +270,11 @@ const fetchData = async (force = false) => {
     entityStore.tableState.page = currentPageIndex.value + 1;
     lastFetchKey = fetchKey;
   } catch (error) {
+    if (seq !== fetchSeq) return;
     if (axios.isCancel(error) || (error as { code?: string }).code === 'ERR_CANCELED') return;
     console.error('Failed to fetch records', error);
   } finally {
-    if (!signal.aborted) loading.value = false;
+    if (seq === fetchSeq) loading.value = false;
   }
 };
 
@@ -319,7 +327,14 @@ const selectedSearchLabel = computed(() => {
   return field?.label || activeEntity.value.searchableFields[0]?.label || '';
 });
 
+const sortableFields = computed(() =>
+  activeEntity.value.sortableFields ?? (activeEntity.value.filters.date ? [activeEntity.value.filters.date] : [])
+);
+
+const isColumnSortable = (key: string) => sortableFields.value.includes(key);
+
 const sortBy = (key: string) => {
+  if (!isColumnSortable(key)) return;
   if (entityStore.tableState.sortBy === key) {
     entityStore.tableState.sortDesc = !entityStore.tableState.sortDesc;
   } else {

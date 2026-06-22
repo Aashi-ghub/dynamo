@@ -14,12 +14,14 @@ const normalizeListState = (entity: EntityConfig, state: TableState) => {
   const search = state.search?.trim() || '';
   const companyName = state.companyName?.trim() || '';
   const status = state.status?.trim() || '';
+  const sortableFields = entity.sortableFields ?? (entity.filters.date ? [entity.filters.date] : []);
+  const sortField = state.sortBy && sortableFields.includes(state.sortBy) ? state.sortBy : undefined;
 
   return {
     pageSize: state.limit,
     search: search || undefined,
     searchField: search ? state.searchField || entity.searchableFields[0]?.key : undefined,
-    sortField: state.sortBy || undefined,
+    sortField,
     sortDirection: state.sortDesc ? 'DESC' : 'ASC',
     status: status || undefined,
     companyName: companyName || undefined,

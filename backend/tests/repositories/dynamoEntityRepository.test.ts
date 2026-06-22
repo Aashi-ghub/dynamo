@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { entityConfigs } from '../../src/config/entities.js';
 import { DynamoEntityRepository } from '../../src/repositories/dynamoEntityRepository.js';
 
@@ -26,25 +26,28 @@ describe('DynamoEntityRepository', () => {
     expect(send).toHaveBeenCalledOnce();
   });
 
-  it('uses the configured GSI for the requested search field', async () => {
-    const send = vi.fn(async (command: QueryCommand) => {
-      expect(command.input.IndexName).toBe('name-index');
-      expect(command.input.KeyConditionExpression).toBe('#searchPk = :search');
-      expect(command.input.ExpressionAttributeNames?.['#searchPk']).toBe('name');
-      expect(command.input.ExpressionAttributeValues?.[':search']).toBe('United Oil & Gas, Singapore');
-      return { Items: [] };
+  it('filters search in memory without case sensitivity', async () => {
+    const send = vi.fn(async (command: ScanCommand) => {
+      expect(command.input.FilterExpression).toBeUndefined();
+      return {
+        Items: [
+          { id: 'a1', name: 'United Oil & Gas, Singapore' },
+          { id: 'a2', name: 'Acme Corp' }
+        ]
+      };
     });
     const repo = new DynamoEntityRepository({ send } as any, entityConfigs.accounts);
 
-    await repo.list({
+    const result = await repo.list({
       pageSize: 25,
       searchField: 'companyName',
-      search: 'United Oil & Gas, Singapore',
+      search: 'united',
       sortDirection: 'ASC',
       filters: {},
       dateRanges: {}
     });
 
+    expect(result.items).toEqual([{ id: 'a1', name: 'United Oil & Gas, Singapore' }]);
     expect(send).toHaveBeenCalledOnce();
   });
 

@@ -63,7 +63,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'accountNumber', label: 'Account Number' },
       { key: 'website', label: 'Website' }
     ],
-    filters: { status: 'status', company: 'companyName', date: 'createdDate' }
+    filters: { status: 'status', company: 'companyName', date: 'createdDate' },
+    sortableFields: ['createdDate']
   },
   contacts: {
     id: 'contacts',
@@ -124,7 +125,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'email', label: 'Email' },
       { key: 'accountName', label: 'Account' }
     ],
-    filters: { status: 'status', company: 'accountName', date: 'createdDate' }
+    filters: { status: 'status', company: 'accountName', date: 'createdDate' },
+    sortableFields: ['createdDate']
   },
   subscriptions: {
     id: 'subscriptions',
@@ -195,7 +197,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'product', label: 'Product' },
       { key: 'subscriptionId', label: 'Subscription ID' }
     ],
-    filters: { status: 'status', company: 'customer', date: 'dateCreated' }
+    filters: { status: 'status', company: 'customer', date: 'dateCreated' },
+    sortableFields: ['dateCreated']
   },
   cloudFiles: {
     id: 'cloudFiles',
@@ -226,6 +229,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'accountId', label: 'Account ID' },
       { key: 'id', label: 'File ID' }
     ],
-    filters: {}
+    filters: {},
+    sortableFields: []
   }
 };
