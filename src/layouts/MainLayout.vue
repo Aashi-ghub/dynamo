@@ -1,16 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col">
+  <div class="min-h-screen bg-white flex flex-col">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header class="bg-brand-black shadow-md">
+      <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-gray-900 tracking-tight">Business Data Portal</h1>
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">
+              T
+            </div>
+            <h1 class="text-xl font-bold text-white tracking-tight">Tvarana</h1>
+            <span class="hidden sm:inline text-sm text-gray-400 font-medium">Data Portal</span>
           </div>
           <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-700 font-medium">{{ authStore.user?.name }}</span>
+            <span class="text-sm text-gray-300 font-medium hidden sm:inline">{{ authStore.user?.name }}</span>
             <button @click="logout"
-              class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+              class="inline-flex items-center px-4 py-1.5 border border-gray-600 text-sm font-semibold rounded-full text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-brand-black focus:ring-primary-500 transition-colors">
               Logout
             </button>
           </div>
@@ -19,20 +23,37 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
-      
-      <!-- Left Side: Entity Selector -->
-      <aside class="w-64 flex-shrink-0">
+    <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-4 lg:py-6 flex flex-col lg:flex-row gap-4 lg:gap-6">
+
+      <!-- Mobile entity selector -->
+      <div class="lg:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <button
+          v-for="entity in Object.values(ENTITIES)"
+          :key="entity.id"
+          @click="entityStore.setActiveEntity(entity.id)"
+          :class="[
+            entityStore.activeEntityId === entity.id
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+            'flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-full transition-colors'
+          ]"
+        >
+          {{ entity.plural }}
+        </button>
+      </div>
+
+      <!-- Desktop sidebar -->
+      <aside class="hidden lg:block w-56 xl:w-64 flex-shrink-0">
         <nav class="space-y-1">
           <button
             v-for="entity in Object.values(ENTITIES)"
             :key="entity.id"
             @click="entityStore.setActiveEntity(entity.id)"
             :class="[
-              entityStore.activeEntityId === entity.id 
-                ? 'bg-primary-50 text-primary-700 border-primary-500' 
+              entityStore.activeEntityId === entity.id
+                ? 'bg-primary-50 text-primary-700 border-primary-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent',
-              'group flex items-center px-3 py-2 text-sm font-medium border-l-4 w-full text-left transition-colors'
+              'group flex items-center px-3 py-2.5 text-sm font-semibold border-l-4 w-full text-left transition-colors rounded-r-md'
             ]"
           >
             {{ entity.plural }}
@@ -41,7 +62,7 @@
       </aside>
 
       <!-- Main Area -->
-      <div class="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      <div class="flex-1 min-w-0 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
         <router-view />
       </div>
 

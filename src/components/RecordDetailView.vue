@@ -1,20 +1,32 @@
 <template>
   <div class="fixed inset-0 z-40 bg-white">
     <div class="flex h-full flex-col">
-      <header class="border-b border-gray-200 bg-white px-6 py-4">
+      <header class="border-b border-gray-200 bg-white px-4 sm:px-6 py-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p class="text-sm font-medium text-gray-500">{{ entity.name }}</p>
-            <h2 class="mt-1 text-xl font-semibold text-gray-900">
-              {{ recordTitle }}
-            </h2>
+          <div class="flex items-center gap-4 min-w-0">
+            <button
+              type="button"
+              @click="$emit('close')"
+              class="inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to {{ entity.plural }}
+            </button>
+            <div class="min-w-0 hidden sm:block">
+              <p class="text-sm font-medium text-gray-500">{{ entity.name }}</p>
+              <h2 class="mt-0.5 truncate text-xl font-semibold text-gray-900">
+                {{ recordTitle }}
+              </h2>
+            </div>
           </div>
           <div class="flex items-center gap-2">
             <button
               type="button"
               :disabled="loading || !record"
               @click="emitEdit"
-              class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Edit
             </button>
@@ -22,22 +34,17 @@
               type="button"
               :disabled="loading || !record"
               @click="emitDelete"
-              class="inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex items-center rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Delete
             </button>
-            <button
-              type="button"
-              @click="$emit('close')"
-              class="rounded-md p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              title="Close"
-            >
-              <span class="sr-only">Close</span>
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+        </div>
+        <div class="mt-3 sm:hidden">
+          <p class="text-sm font-medium text-gray-500">{{ entity.name }}</p>
+          <h2 class="mt-0.5 text-lg font-semibold text-gray-900 break-words">
+            {{ recordTitle }}
+          </h2>
         </div>
       </header>
 
@@ -52,14 +59,14 @@
           </div>
         </div>
 
-        <div v-else-if="error" class="mx-auto max-w-3xl px-6 py-12">
+        <div v-else-if="error" class="mx-auto max-w-3xl px-4 sm:px-6 py-12">
           <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {{ error }}
           </div>
         </div>
 
-        <div v-else-if="record" class="mx-auto max-w-6xl px-6 py-6">
-          <section class="border-b border-gray-200 bg-white px-6 py-5">
+        <div v-else-if="record" class="mx-auto max-w-6xl px-4 sm:px-6 py-6">
+          <section class="border-b border-gray-200 bg-white px-4 sm:px-6 py-5 rounded-lg shadow-sm">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div v-for="item in summaryFields" :key="item.key">
                 <p class="text-xs font-medium uppercase text-gray-500">{{ item.label }}</p>
@@ -68,15 +75,15 @@
             </div>
           </section>
 
-          <section v-for="group in groupedDetailFields" :key="group.label" class="mt-6 bg-white">
-            <div class="border-b border-gray-200 px-6 py-4">
+          <section v-for="group in groupedDetailFields" :key="group.label" class="mt-6 bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="border-b border-gray-200 px-4 sm:px-6 py-4 bg-gray-50">
               <h3 class="text-base font-semibold text-gray-900">{{ group.label }}</h3>
             </div>
             <dl class="grid grid-cols-1 divide-y divide-gray-200 md:grid-cols-2 md:divide-x md:divide-y-0">
-              <div v-for="field in group.fields" :key="field.key" class="px-6 py-4">
+              <div v-for="field in group.fields" :key="field.key" class="px-4 sm:px-6 py-4">
                 <dt class="text-xs font-medium uppercase text-gray-500">{{ field.label }}</dt>
                 <dd class="mt-2 break-words text-sm text-gray-900">
-                  <pre v-if="isStructured(field.value)" class="whitespace-pre-wrap rounded-md bg-gray-50 p-3 text-xs text-gray-800">{{ formatValue(field.value) }}</pre>
+                  <pre v-if="isStructured(field.value)" class="whitespace-pre-wrap rounded-md bg-gray-50 p-3 text-xs text-gray-800 overflow-x-auto">{{ formatValue(field.value) }}</pre>
                   <span v-else>{{ formatValue(field.value) }}</span>
                 </dd>
               </div>

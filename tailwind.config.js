@@ -8,12 +8,15 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#c5b222ff',
-          600: '#a37b16ff',
-          700: '#b28325ff',
-        }
+          50: '#fff4eb',
+          100: '#ffe0cc',
+          500: '#ff8533',
+          600: '#ff6600',
+          700: '#e55c00',
+          800: '#cc5200',
+          900: '#993d00',
+        },
+        'brand-black': '#1a1a1a',
       }
     },
   },
