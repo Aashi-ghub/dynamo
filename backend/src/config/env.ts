@@ -1,26 +1,38 @@
 import dotenv from 'dotenv';
 
+dotenv.config({ path: '.env.local' });
+if (process.env.ENV_FILE) {
+  const localAppEnv = process.env.APP_ENV;
+  const localSkipAuth = process.env.SKIP_AUTH;
+  const localEnvFile = process.env.ENV_FILE;
+  dotenv.config({ path: process.env.ENV_FILE, override: true });
+  if (localAppEnv !== undefined) process.env.APP_ENV = localAppEnv;
+  if (localSkipAuth !== undefined) process.env.SKIP_AUTH = localSkipAuth;
+  if (localEnvFile !== undefined) process.env.ENV_FILE = localEnvFile;
+}
 const requestedEnv = process.env.APP_ENV?.toLowerCase() || 'local';
-dotenv.config({ path: `.env.${requestedEnv}` });
+if (!process.env.ENV_FILE && requestedEnv !== 'local') {
+  dotenv.config({ path: `.env.${requestedEnv}` });
+}
 dotenv.config();
 
 export type AppEnv = 'LOCAL' | 'DEV' | 'STAGING' | 'PROD';
 export type DeleteMode = 'hard' | 'soft';
 
 const appEnv = (process.env.APP_ENV || 'LOCAL').toUpperCase() as AppEnv;
-const devAuthBypass = process.env.DEV_AUTH_BYPASS === 'true';
+const skipAuth = process.env.SKIP_AUTH === 'true';
 
-if (appEnv === 'PROD' && devAuthBypass) {
-  throw new Error('DEV_AUTH_BYPASS cannot be enabled in PROD');
+if (skipAuth && appEnv !== 'LOCAL') {
+  throw new Error('SKIP_AUTH can only be enabled when APP_ENV=LOCAL');
 }
 
 export const env = {
   appEnv,
   isLocal: appEnv === 'LOCAL',
+  skipAuth,
   port: Number(process.env.PORT || 3000),
   awsRegion: process.env.AWS_REGION || 'us-east-1',
   dynamoDbEndpoint: process.env.DYNAMODB_ENDPOINT,
-  devAuthBypass,
   cognitoUserPoolId: process.env.COGNITO_USER_POOL_ID || '',
   cognitoClientId: process.env.COGNITO_CLIENT_ID || '',
   allowedOrigins: (process.env.ALLOWED_ORIGINS || '')

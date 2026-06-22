@@ -68,12 +68,12 @@
             </div>
           </section>
 
-          <section class="mt-6 bg-white">
+          <section v-for="group in groupedDetailFields" :key="group.label" class="mt-6 bg-white">
             <div class="border-b border-gray-200 px-6 py-4">
-              <h3 class="text-base font-semibold text-gray-900">Complete Record</h3>
+              <h3 class="text-base font-semibold text-gray-900">{{ group.label }}</h3>
             </div>
             <dl class="grid grid-cols-1 divide-y divide-gray-200 md:grid-cols-2 md:divide-x md:divide-y-0">
-              <div v-for="field in detailFields" :key="field.key" class="px-6 py-4">
+              <div v-for="field in group.fields" :key="field.key" class="px-6 py-4">
                 <dt class="text-xs font-medium uppercase text-gray-500">{{ field.label }}</dt>
                 <dd class="mt-2 break-words text-sm text-gray-900">
                   <pre v-if="isStructured(field.value)" class="whitespace-pre-wrap rounded-md bg-gray-50 p-3 text-xs text-gray-800">{{ formatValue(field.value) }}</pre>
@@ -109,26 +109,39 @@ const knownLabels = computed(() => {
   const labels = new Map<string, string>();
   for (const column of props.entity.columns) labels.set(column.key, column.label);
   for (const field of props.entity.fields) labels.set(field.key, field.label);
+  for (const group of props.entity.detailGroups) {
+    for (const field of group.fields) labels.set(field, labels.get(field) || humanize(field));
+  }
   labels.set('id', 'ID');
-  labels.set('createdAt', 'Created At');
-  labels.set('updatedAt', 'Updated At');
   return labels;
 });
 
 const detailFields = computed(() => {
   if (!props.record) return [];
-  return Object.entries(props.record).map(([key, value]) => ({
+  const configuredFields = props.entity.detailGroups.flatMap((group) => group.fields);
+  return configuredFields.filter((key) => Object.hasOwn(props.record || {}, key)).map((key) => ({
     key,
     label: knownLabels.value.get(key) || humanize(key),
-    value
+    value: props.record?.[key]
   }));
 });
+
+const groupedDetailFields = computed(() => props.entity.detailGroups.map((group) => ({
+  label: group.label,
+  fields: group.fields
+    .filter((key) => props.record && Object.hasOwn(props.record, key))
+    .map((key) => ({
+      key,
+      label: knownLabels.value.get(key) || humanize(key),
+      value: props.record?.[key]
+    }))
+})).filter((group) => group.fields.length > 0));
 
 const summaryFields = computed(() => detailFields.value.slice(0, 4));
 
 const recordTitle = computed(() => {
   if (!props.record) return `${props.entity.name} Details`;
-  const titleField = ['name', 'fileName', 'email', 'plan', 'id'].find((key) => props.record?.[key]);
+  const titleField = [props.entity.titleField, 'name', 'companyName', 'fileName', 'email', 'subscriptionId', 'id'].find((key) => props.record?.[key]);
   return titleField ? String(props.record[titleField]) : `${props.entity.name} Details`;
 });
 
@@ -153,6 +166,10 @@ const formatValue = (value: unknown) => {
   if (value instanceof Date) return value.toLocaleString();
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (isStructured(value)) return JSON.stringify(value, null, 2);
+  if (typeof value === 'number' && value > 100000000000) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString();
+  }
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime())) return date.toLocaleString();

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { env } from '../config/env.js';
-import type { EntityConfig } from '../config/entities.js';
+import { dynamoToFrontend, type EntityConfig } from '../config/entities.js';
 import type { BusinessRecord } from '../models/businessRecord.js';
 import type { DynamoEntityRepository } from '../repositories/dynamoEntityRepository.js';
 import type { AuthUser, ListQuery } from '../types/api.js';
@@ -13,47 +13,79 @@ export class EntityService {
   ) {}
 
   list(query: ListQuery) {
-    return this.repository.list(query);
+    return this.repository.list(query).then((result) => ({
+      ...result,
+      items: result.items.map((item) => this.toFrontend(item))
+    }));
   }
 
-  async get(id: string) {
-    const record = await this.repository.getById(id);
+  async get(id: string, sortKey?: string | boolean | number) {
+    const record = await this.repository.getById(id, sortKey);
     if (!record) throw notFound();
-    return record;
+    return this.toFrontend(record);
   }
 
-  create(input: Record<string, unknown>, user?: AuthUser) {
-    const now = new Date().toISOString();
+  async create(input: Record<string, unknown>, user?: AuthUser) {
+    const now = Date.now();
+    const rawInput = this.toDynamo(input);
+    const id = typeof rawInput[this.config.idField] === 'string' && String(rawInput[this.config.idField]).trim()
+      ? rawInput[this.config.idField]
+      : randomUUID();
     const record: BusinessRecord = {
-      id: typeof input.id === 'string' && input.id.trim() ? input.id : randomUUID(),
-      ...input,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: user?.sub
+      [this.config.idField]: id,
+      ...rawInput
     };
-    return this.repository.create(record);
+    if (this.config.fieldMap.createdDate) record[this.config.fieldMap.createdDate] = now;
+    if (this.config.fieldMap.dateCreated) record[this.config.fieldMap.dateCreated] = new Date(now).toISOString().slice(0, 16).replace('T', ' ');
+    if (this.config.fieldMap.lastModifiedDate) record[this.config.fieldMap.lastModifiedDate] = now;
+    if (this.config.fieldMap.createdById && user?.sub) record[this.config.fieldMap.createdById] = user.sub;
+    if (this.config.fieldMap.lastModifiedById && user?.sub) record[this.config.fieldMap.lastModifiedById] = user.sub;
+    return this.toFrontend(await this.repository.create(record));
   }
 
-  async update(id: string, patch: Record<string, unknown>, user?: AuthUser) {
-    const updated = await this.repository.update(id, { ...patch, updatedBy: user?.sub });
+  async update(id: string, patch: Record<string, unknown>, user?: AuthUser, sortKey?: string | boolean | number) {
+    const rawPatch = this.toDynamo(patch);
+    if (this.config.fieldMap.lastModifiedDate) rawPatch[this.config.fieldMap.lastModifiedDate] = Date.now();
+    if (this.config.fieldMap.lastModifiedById && user?.sub) rawPatch[this.config.fieldMap.lastModifiedById] = user.sub;
+    const updated = await this.repository.update(id, rawPatch, sortKey);
     if (!updated) throw notFound();
-    return updated;
+    return this.toFrontend(updated);
   }
 
-  async delete(id: string, user?: AuthUser) {
-    if (env.deleteMode === 'soft' && this.config.softDeleteStatus) {
+  async delete(id: string, user?: AuthUser, sortKey?: string | boolean | number) {
+    if (env.deleteMode === 'soft' && this.config.softDeleteField) {
+      const rawField = this.config.fieldMap[this.config.softDeleteField] || this.config.softDeleteField;
       const updated = await this.repository.update(id, {
-        status: this.config.softDeleteStatus,
-        deletedAt: new Date().toISOString(),
-        deletedBy: user?.sub
-      });
+        [rawField]: this.config.softDeleteValue,
+        ...(this.config.fieldMap.lastModifiedDate ? { [this.config.fieldMap.lastModifiedDate]: Date.now() } : {}),
+        ...(this.config.fieldMap.lastModifiedById && user?.sub ? { [this.config.fieldMap.lastModifiedById]: user.sub } : {})
+      }, sortKey);
       if (!updated) throw notFound();
-      return updated;
+      return this.toFrontend(updated);
     }
 
-    const existing = await this.repository.getById(id);
+    const existing = await this.repository.getById(id, sortKey);
     if (!existing) throw notFound();
-    await this.repository.hardDelete(id);
+    await this.repository.hardDelete(id, sortKey);
     return { id, deleted: true };
+  }
+
+  private toDynamo(input: Record<string, unknown>) {
+    const raw: Record<string, unknown> = {};
+    for (const [field, value] of Object.entries(input)) {
+      const rawField = this.config.fieldMap[field];
+      if (rawField) raw[rawField] = value;
+    }
+    return raw;
+  }
+
+  private toFrontend(record: BusinessRecord) {
+    const rawToFrontend = dynamoToFrontend(this.config);
+    const transformed: Record<string, unknown> = {};
+    for (const [rawField, value] of Object.entries(record)) {
+      const frontendField = rawToFrontend[rawField];
+      if (frontendField) transformed[frontendField] = value;
+    }
+    return transformed as BusinessRecord;
   }
 }

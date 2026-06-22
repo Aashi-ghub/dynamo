@@ -17,7 +17,8 @@ export const useEntityStore = defineStore('entity', () => {
     startDate: undefined,
     endDate: undefined,
     status: undefined,
-    companyName: undefined
+    companyName: undefined,
+    searchField: ENTITIES.accounts.searchableFields[0]?.key
   });
 
   function setActiveEntity(id: string) {
@@ -32,6 +33,7 @@ export const useEntityStore = defineStore('entity', () => {
       tableState.endDate = undefined;
       tableState.status = undefined;
       tableState.companyName = undefined;
+      tableState.searchField = ENTITIES[id].searchableFields[0]?.key;
     }
   }
 

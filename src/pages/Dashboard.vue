@@ -19,16 +19,25 @@
           <!-- Search -->
           <div class="flex-1 min-w-[200px] max-w-sm">
             <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
-            <input
-              type="text"
-              v-model="searchInput"
-              @input="onSearch"
-              :placeholder="`Search...`"
-              class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
-            />
+            <div class="flex gap-2">
+              <select
+                v-model="entityStore.tableState.searchField"
+                @change="onFilterChange"
+                class="block w-40 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              >
+                <option v-for="field in activeEntity.searchableFields" :key="field.key" :value="field.key">{{ field.label }}</option>
+              </select>
+              <input
+                type="text"
+                v-model="searchInput"
+                @input="onSearch"
+                :placeholder="`Search ${selectedSearchLabel}`"
+                class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+              />
+            </div>
           </div>
           <!-- Status Filter -->
-          <div class="w-48">
+          <div v-if="activeEntity.filters.status" class="w-48">
             <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
             <select v-model="entityStore.tableState.status" @change="onFilterChange" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white">
               <option :value="undefined">All Statuses</option>
@@ -36,7 +45,7 @@
             </select>
           </div>
           <!-- Company Name Filter -->
-          <div class="w-64">
+          <div v-if="activeEntity.filters.company" class="w-64">
             <label class="block text-xs font-medium text-gray-500 mb-1">Company</label>
             <input
               type="text"
@@ -47,7 +56,7 @@
             />
           </div>
           <!-- Date Range Filter -->
-          <div class="flex items-center space-x-2">
+          <div v-if="activeEntity.filters.date" class="flex items-center space-x-2">
             <div>
               <label class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
               <input type="date" v-model="entityStore.tableState.startDate" @change="onFilterChange" class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
@@ -95,7 +104,7 @@
               No {{ activeEntity.plural.toLowerCase() }} found.
             </td>
           </tr>
-          <tr v-for="record in records" :key="record.id" class="hover:bg-gray-50 transition-colors">
+          <tr v-for="record in records" :key="record[activeEntity.partitionKeyField] || record.id || record.subscriptionId" class="hover:bg-gray-50 transition-colors">
             <td v-for="col in activeEntity.columns" :key="col.key" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               <span v-if="col.type === 'status'" :class="[
                 record[col.key] === 'Active' ? 'bg-green-100 text-green-800' : 
@@ -106,7 +115,7 @@
                 {{ record[col.key] }}
               </span>
               <span v-else-if="col.type === 'date'">
-                {{ new Date(record[col.key]).toLocaleDateString() }}
+                {{ formatValue(record[col.key], col.type) }}
               </span>
               <span v-else>
                 {{ record[col.key] }}
@@ -193,7 +202,7 @@ const detailState = ref({
 const fetchData = async () => {
   loading.value = true;
   try {
-    const res = await entityService.fetchRecords(activeEntity.value.apiPath, entityStore.tableState);
+    const res = await entityService.fetchRecords(activeEntity.value, entityStore.tableState);
     records.value = res.data;
     totalRecords.value = res.total;
   } catch (error) {
@@ -222,8 +231,14 @@ const onFilterChange = () => {
 };
 
 const statusOptions = computed(() => {
-  const statusField = activeEntity.value.fields.find(f => f.key === 'status');
+  const statusKey = activeEntity.value.filters.status;
+  const statusField = activeEntity.value.fields.find(f => f.key === statusKey);
   return statusField?.options || [];
+});
+
+const selectedSearchLabel = computed(() => {
+  const field = activeEntity.value.searchableFields.find((item) => item.key === entityStore.tableState.searchField);
+  return field?.label || activeEntity.value.searchableFields[0]?.label || '';
 });
 
 const sortBy = (key: string) => {
@@ -264,7 +279,7 @@ const openViewModal = async (record: any) => {
   };
 
   try {
-    const detailRecord = await entityService.fetchRecordById(activeEntity.value.apiPath, record.id);
+    const detailRecord = await entityService.fetchRecordById(activeEntity.value, record);
     detailState.value.record = detailRecord;
   } catch (error) {
     console.error("Failed to fetch record details", error);
@@ -309,7 +324,7 @@ const handleSave = async (data: any) => {
     if (modalState.value.mode === 'create') {
       await entityService.createRecord(activeEntity.value.apiPath, data);
     } else {
-      const updatedRecord = await entityService.updateRecord(activeEntity.value.apiPath, data.id, data);
+      const updatedRecord = await entityService.updateRecord(activeEntity.value, modalState.value.record, data);
       if (detailState.value.isOpen) {
         detailState.value.record = updatedRecord;
       }
@@ -326,7 +341,7 @@ const handleSave = async (data: any) => {
 const handleDelete = async () => {
   loading.value = true;
   try {
-    await entityService.deleteRecord(activeEntity.value.apiPath, modalState.value.record.id);
+    await entityService.deleteRecord(activeEntity.value, modalState.value.record);
     closeModal();
     closeDetailView();
     fetchData();
@@ -341,12 +356,24 @@ const handleDelete = async () => {
 watch(() => activeEntity.value.id, () => {
   searchInput.value = '';
   companyInput.value = '';
+  entityStore.tableState.searchField = activeEntity.value.searchableFields[0]?.key;
   closeDetailView();
   closeModal();
   fetchData();
 });
 
 onMounted(() => {
+  entityStore.tableState.searchField = activeEntity.value.searchableFields[0]?.key;
   fetchData();
 });
+
+const formatValue = (value: unknown, type?: string) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (type === 'date') {
+    const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+};
 </script>

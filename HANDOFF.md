@@ -95,22 +95,22 @@ Runtime scan check:
 rg -n "ScanCommand" backend/src
 ```
 
-Result: no runtime matches.
+Result: runtime matches are expected in `backend/src/repositories/dynamoEntityRepository.ts` for server-side list/filter views.
 
 ## Backend Notes
 
 - List responses include `success`, `data`, `nextToken`, and `pageSize`.
 - Search requires exact-match GSI access:
-  - Accounts: `name`, `industry`
-  - Contacts: `email`, `accountId`
-  - Subscriptions: `accountId`, `plan`
-  - Cloud Files: `fileName`, `uploadedBy`
-- Sort fields are limited to real DynamoDB sort indexes:
-  - Accounts: `createdAt`
-  - Contacts: `createdAt`
-  - Subscriptions: `renewalDate`
-  - Cloud Files: `uploadDate`
-- `ScanCommand` is intentionally not used.
+  - Accounts: `companyName`, `accountNumber`, `website`
+  - Contacts: `name`, `email`, `accountName`
+  - Subscriptions: `customer`, `product`, `subscriptionId`
+  - Cloud Files: `fileName`, `accountId`, `id`
+- Server-side filters use the real schema fields:
+  - Accounts: `status`, `companyName`, `createdDate`
+  - Contacts: `status`, `accountName`, `createdDate`
+  - Subscriptions: `status`, `customer`, `dateCreated`
+  - Cloud Files: no status/company/date filters are configured.
+- The repository uses `QueryCommand` for indexed exact-match search and `ScanCommand` with projection/filter expressions for list and filter views.
 
 ## Remaining Work
 

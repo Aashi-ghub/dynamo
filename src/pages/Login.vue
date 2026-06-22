@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
@@ -62,6 +62,14 @@ const loading = ref(false);
 
 const router = useRouter();
 const authStore = useAuthStore();
+
+onMounted(async () => {
+  const session = await authService.getSession();
+  if (session) {
+    authStore.setAuth(session.token, session.user);
+    router.push('/');
+  }
+});
 
 const handleLogin = async () => {
   error.value = '';

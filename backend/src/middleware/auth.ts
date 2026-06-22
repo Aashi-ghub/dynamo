@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { env } from '../config/env.js';
 import type { ApiRequest, AuthUser } from '../types/api.js';
-import { forbidden, unauthorized } from '../utils/errors.js';
+import { unauthorized } from '../utils/errors.js';
 
 const verifier =
   env.cognitoUserPoolId && env.cognitoClientId
@@ -16,15 +16,12 @@ const verifier =
 export const authenticate: RequestHandler = async (req, _res, next) => {
   const apiReq = req as ApiRequest;
   try {
-    if (env.devAuthBypass) {
-      if (!env.isLocal && env.appEnv !== 'DEV') {
-        throw forbidden('Development auth bypass is only allowed in LOCAL or DEV');
-      }
+    if (env.skipAuth) {
       apiReq.context.user = {
-        sub: 'local-developer',
-        email: 'developer@example.local',
-        username: 'local-developer',
-        groups: ['Developers']
+        sub: 'local-dynamo-test',
+        email: 'local-dynamo-test@example.local',
+        username: 'local-dynamo-test',
+        groups: []
       };
       return next();
     }

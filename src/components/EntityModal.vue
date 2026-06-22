@@ -63,6 +63,14 @@
                     </option>
                   </select>
                 </template>
+                <template v-else-if="field.type === 'boolean'">
+                  <input :id="field.key" v-model="formData[field.key]" type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                </template>
+                <template v-else-if="field.type === 'textarea'">
+                  <textarea :id="field.key" v-model="formData[field.key]" :required="field.required" rows="3"
+                    class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md transition-colors"></textarea>
+                </template>
                 <template v-else-if="field.type === 'date'">
                   <input :type="field.type" :id="field.key" v-model="formData[field.key]" :required="field.required"
                     class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md transition-colors" />
@@ -107,7 +115,26 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'save', 'delete']);
 
-const formData = ref<any>(props.record ? { ...props.record } : {});
+const editableKeys = computed(() => props.entity.fields.map((field) => field.key));
+
+const toFormValue = (fieldKey: string, value: unknown) => {
+  const field = props.entity.fields.find((item) => item.key === fieldKey);
+  if (field?.type === 'date' && value) {
+    const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
+    return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
+  }
+  return value;
+};
+
+const buildFormData = (record: Record<string, any> | null | undefined) => {
+  const next: Record<string, any> = {};
+  for (const key of editableKeys.value) {
+    next[key] = toFormValue(key, record?.[key] ?? '');
+  }
+  return next;
+};
+
+const formData = ref<any>(buildFormData(props.record));
 
 const modeTitle = computed(() => {
   if (props.mode === 'create') return `Create ${props.entity.name}`;
@@ -118,14 +145,14 @@ const modeTitle = computed(() => {
 });
 
 watch(() => props.record, (newRecord) => {
-  if (newRecord) {
-    formData.value = { ...newRecord };
-  } else {
-    formData.value = {};
-  }
+  formData.value = buildFormData(newRecord);
 }, { deep: true, immediate: true });
 
 const submitForm = () => {
-  emit('save', formData.value);
+  const payload: Record<string, any> = {};
+  for (const key of editableKeys.value) {
+    payload[key] = formData.value[key];
+  }
+  emit('save', payload);
 };
 </script>

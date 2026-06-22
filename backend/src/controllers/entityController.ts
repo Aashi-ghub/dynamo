@@ -5,7 +5,7 @@ import { DynamoEntityRepository } from '../repositories/dynamoEntityRepository.j
 import { EntityService } from '../services/entityService.js';
 import type { ApiRequest, EntityName } from '../types/api.js';
 import { listSuccess, success } from '../utils/response.js';
-import { validateCreateBody, validateId, validateListQuery, validateUpdateBody } from '../validators/entityValidator.js';
+import { validateCreateBody, validateId, validateListQuery, validateSortKey, validateUpdateBody } from '../validators/entityValidator.js';
 
 const services = new Map<EntityName, EntityService>();
 
@@ -29,20 +29,23 @@ export const createEntityController = (entityName: EntityName) => {
     },
     get: async (req: ApiRequest, res: Response) => {
       const id = validateId(req.params.id);
-      success(res, await service.get(id));
+      const sortKey = validateSortKey(req.query.sortKey, config);
+      success(res, await service.get(id, sortKey));
     },
     create: async (req: ApiRequest, res: Response) => {
-      const body = validateCreateBody(req.body);
+      const body = validateCreateBody(req.body, config);
       success(res, await service.create(body, req.context.user), 201);
     },
     update: async (req: ApiRequest, res: Response) => {
       const id = validateId(req.params.id);
-      const body = validateUpdateBody(req.body);
-      success(res, await service.update(id, body, req.context.user));
+      const sortKey = validateSortKey(req.query.sortKey, config);
+      const body = validateUpdateBody(req.body, config);
+      success(res, await service.update(id, body, req.context.user, sortKey));
     },
     delete: async (req: ApiRequest, res: Response) => {
       const id = validateId(req.params.id);
-      success(res, await service.delete(id, req.context.user));
+      const sortKey = validateSortKey(req.query.sortKey, config);
+      success(res, await service.delete(id, req.context.user, sortKey));
     }
   };
 };

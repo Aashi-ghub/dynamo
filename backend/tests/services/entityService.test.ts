@@ -15,12 +15,12 @@ describe('EntityService', () => {
     const repo = repository();
     const service = new EntityService(repo as any, entityConfigs.accounts);
 
-    const created = await service.create({ name: 'Acme' }, { sub: 'user-1', groups: [] });
+    const created = await service.create({ companyName: 'Acme' }, { sub: 'user-1', groups: [] });
 
     expect(created.id).toBeTruthy();
-    expect(created.createdAt).toBeTruthy();
-    expect(created.updatedAt).toBeTruthy();
-    expect(created.createdBy).toBe('user-1');
+    expect(created.createdDate).toBeTruthy();
+    expect(created.lastModifiedDate).toBeTruthy();
+    expect(created.createdById).toBe('user-1');
     expect(repo.create).toHaveBeenCalledOnce();
   });
 
@@ -38,6 +38,6 @@ describe('EntityService', () => {
     const service = new EntityService(repo as any, entityConfigs.accounts);
 
     await expect(service.delete('a1')).resolves.toEqual({ id: 'a1', deleted: true });
-    expect(repo.hardDelete).toHaveBeenCalledWith('a1');
+    expect(repo.hardDelete).toHaveBeenCalledWith('a1', undefined);
   });
 });

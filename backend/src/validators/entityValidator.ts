@@ -8,7 +8,7 @@ const idSchema = z.string().trim().min(1).max(256);
 const scalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const bodySchema = z.record(z.union([scalarSchema, z.array(scalarSchema), z.record(scalarSchema)]));
 
-const reservedFields = new Set(['id', 'createdAt', 'updatedAt']);
+const reservedFields = new Set(['id']);
 const systemFields = new Set(['createdBy', 'updatedBy', 'deletedAt', 'deletedBy']);
 
 const issuesFromZod = (error: z.ZodError) =>
@@ -25,7 +25,25 @@ export const validateId = (id: unknown) => {
   return result.data;
 };
 
-export const validateCreateBody = (body: unknown) => {
+export const validateSortKey = (sortKey: unknown, config: EntityConfig) => {
+  if (!config.sortKeyField) return undefined;
+  if (sortKey === undefined || sortKey === null || sortKey === '') {
+    throw badRequest('Validation failed', [{ field: 'sortKey', message: 'sortKey is required' }]);
+  }
+  if (config.sortKeyType === 'boolean') {
+    if (sortKey === true || sortKey === 'true' || sortKey === 1 || sortKey === '1') return true;
+    if (sortKey === false || sortKey === 'false' || sortKey === 0 || sortKey === '0') return false;
+    throw badRequest('Validation failed', [{ field: 'sortKey', message: 'sortKey must be true or false' }]);
+  }
+  if (config.sortKeyType === 'number') {
+    const parsed = Number(sortKey);
+    if (!Number.isNaN(parsed)) return parsed;
+    throw badRequest('Validation failed', [{ field: 'sortKey', message: 'sortKey must be a number' }]);
+  }
+  return String(sortKey);
+};
+
+export const validateCreateBody = (body: unknown, config: EntityConfig) => {
   const result = bodySchema.safeParse(body);
   if (!result.success) {
     throw badRequest('Validation failed', issuesFromZod(result.error));
@@ -34,17 +52,23 @@ export const validateCreateBody = (body: unknown) => {
     throw badRequest('Validation failed', [{ field: 'body', message: 'Request body cannot be empty' }]);
   }
   for (const field of Object.keys(result.data)) {
-    if (systemFields.has(field)) {
-      throw badRequest('Validation failed', [{ field, message: 'System field cannot be provided by clients' }]);
+    if (systemFields.has(field) || config.readonlyFields.includes(field) || !config.editableFields.includes(field)) {
+      throw badRequest('Validation failed', [{ field, message: 'Field cannot be provided by clients' }]);
+    }
+  }
+  for (const field of config.requiredFields) {
+    const value = result.data[field];
+    if (value === undefined || value === null || value === '') {
+      throw badRequest('Validation failed', [{ field, message: 'Field is required' }]);
     }
   }
   return result.data;
 };
 
-export const validateUpdateBody = (body: unknown) => {
-  const record = validateCreateBody(body);
+export const validateUpdateBody = (body: unknown, config: EntityConfig) => {
+  const record = validateCreateBody(body, { ...config, requiredFields: [] });
   for (const field of Object.keys(record)) {
-    if (reservedFields.has(field) || systemFields.has(field)) {
+    if (reservedFields.has(field) || systemFields.has(field) || config.readonlyFields.includes(field) || !config.editableFields.includes(field)) {
       throw badRequest('Validation failed', [{ field, message: 'Field cannot be updated directly' }]);
     }
   }
@@ -66,7 +90,7 @@ export const validateListQuery = (query: Record<string, unknown>, config: Entity
   }
 
   const sortField = typeof query.sortField === 'string' ? query.sortField : undefined;
-  if (sortField && !Object.hasOwn(config.sortIndexes, sortField)) {
+  if (sortField && !Object.hasOwn(config.sortableFields, sortField)) {
     throw badRequest('Unsupported sort field', [{ field: 'sortField', message: 'Unsupported sort field' }]);
   }
 

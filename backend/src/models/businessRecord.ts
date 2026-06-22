@@ -1,9 +1,4 @@
 export interface BusinessRecord {
-  id: string;
-  createdAt?: string;
-  updatedAt?: string;
-  status?: string;
-  type?: string;
-  active?: boolean;
+  id?: string;
   [key: string]: unknown;
 }

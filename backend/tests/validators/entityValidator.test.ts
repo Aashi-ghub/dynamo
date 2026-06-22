@@ -7,21 +7,21 @@ describe('entityValidator', () => {
     const query = validateListQuery(
       {
         pageSize: '10',
-        status: 'Active',
-        active: 'true',
-        createdAtFrom: '2026-01-01',
-        searchField: 'name',
+        status: 'Pending',
+        companyName: 'United Oil & Gas, Singapore',
+        createdDateFrom: '2026-01-01',
+        searchField: 'companyName',
         search: 'Acme',
-        sortField: 'createdAt',
+        sortField: 'createdDate',
         sortDirection: 'DESC'
       },
       entityConfigs.accounts
     );
 
     expect(query.pageSize).toBe(10);
-    expect(query.filters).toEqual({ status: 'Active', active: true });
-    expect(query.dateRanges.createdAt.from).toBe('2026-01-01');
-    expect(query.searchField).toBe('name');
+    expect(query.filters).toEqual({ status: 'Pending', companyName: 'United Oil & Gas, Singapore' });
+    expect(query.dateRanges.createdDate.from).toBe('2026-01-01');
+    expect(query.searchField).toBe('companyName');
     expect(query.search).toBe('Acme');
     expect(query.sortDirection).toBe('DESC');
   });
@@ -37,14 +37,14 @@ describe('entityValidator', () => {
   });
 
   it('allows only fields backed by configured search indexes', () => {
-    const query = validateListQuery({ searchField: 'uploadedBy', search: 'Aashi' }, entityConfigs.cloudFiles);
+    const query = validateListQuery({ searchField: 'accountId', search: '0010I00001ecf4L' }, entityConfigs.cloudFiles);
 
-    expect(query.searchField).toBe('uploadedBy');
-    expect(query.search).toBe('Aashi');
+    expect(query.searchField).toBe('accountId');
+    expect(query.search).toBe('0010I00001ecf4L');
   });
 
   it('rejects direct system field updates', () => {
-    expect(() => validateUpdateBody({ id: 'abc' })).toThrow('Validation failed');
-    expect(() => validateCreateBody({ createdBy: 'client' })).toThrow('Validation failed');
+    expect(() => validateUpdateBody({ id: 'abc' }, entityConfigs.accounts)).toThrow('Validation failed');
+    expect(() => validateCreateBody({ createdBy: 'client' }, entityConfigs.accounts)).toThrow('Validation failed');
   });
 });

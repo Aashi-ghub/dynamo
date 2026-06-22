@@ -11,7 +11,7 @@ docker compose up -d
 npm run dev
 ```
 
-The API runs on `http://localhost:3000` with `DEV_AUTH_BYPASS=true` from `.env.local`.
+The API runs on `http://localhost:3000` and requires a valid Cognito access token by default.
 
 Use `VITE_API_URL=http://localhost:3000` in the Vue app.
 
@@ -31,7 +31,7 @@ Environment files are included as templates:
 - `.env.staging`
 - `.env.prod`
 
-`DEV_AUTH_BYPASS=true` is only accepted in `LOCAL` or `DEV`; the process fails fast if enabled in `PROD`.
+For a local DynamoDB smoke test only, set `APP_ENV=LOCAL` and `SKIP_AUTH=true`. To reuse a specific env file without copying secrets, also set `ENV_FILE=.env.prod`. The backend refuses `SKIP_AUTH=true` outside `LOCAL`. The unauthenticated `/health` endpoint remains available for health checks.
 
 ## API routes
 
@@ -56,7 +56,7 @@ Environment files are included as templates:
 - `PUT /cloud-files/:id`
 - `DELETE /cloud-files/:id`
 
-List endpoints support `pageSize`, `nextToken`, `searchField`, `search`, `sortField`, `sortDirection`, generic filters like `status`, `type`, `active`, and date ranges like `createdAtFrom` and `createdAtTo`.
+List endpoints support `pageSize`, `nextToken`, `searchField`, `search`, `sortField`, `sortDirection`, configured filters, and configured date ranges. Field names in API requests and responses are frontend-friendly names such as `companyName`, `createdDate`, `accountName`, `customer`, and `fileName`.
 
 List responses include pagination metadata:
 
@@ -78,20 +78,20 @@ Search uses exact-match DynamoDB GSI queries. It does not perform contains searc
 Examples:
 
 ```http
-GET /accounts?searchField=name&search=Acme
+GET /accounts?searchField=companyName&search=Acme
 GET /contacts?searchField=email&search=john@example.com
-GET /subscriptions?searchField=plan&search=Enterprise
-GET /cloud-files?searchField=uploadedBy&search=aashi@example.com
+GET /subscriptions?searchField=product&search=Inventory%20Count
+GET /cloud-files?searchField=accountId&search=0010I00001ecf4L
 ```
 
 Valid `searchField` values:
 
 | Entity | Valid searchField values |
 |---|---|
-| Accounts | `name`, `industry` |
-| Contacts | `email`, `accountId` |
-| Subscriptions | `accountId`, `plan` |
-| Cloud Files | `fileName`, `uploadedBy` |
+| Accounts | `companyName`, `accountNumber`, `website` |
+| Contacts | `name`, `email`, `accountName` |
+| Subscriptions | `customer`, `product`, `subscriptionId` |
+| Cloud Files | `fileName`, `accountId`, `id` |
 
 Unsupported `searchField` values return `400 Bad Request`.
 
@@ -102,35 +102,32 @@ Sorting only allows fields backed by configured DynamoDB sort indexes. Unsupport
 Examples:
 
 ```http
-GET /accounts?sortField=createdAt&sortDirection=DESC
-GET /contacts?sortField=createdAt&sortDirection=DESC
-GET /subscriptions?sortField=renewalDate&sortDirection=ASC
-GET /cloud-files?sortField=uploadDate&sortDirection=DESC
+GET /accounts?sortField=createdDate&sortDirection=DESC
+GET /contacts?sortField=createdDate&sortDirection=DESC
+GET /subscriptions?sortField=dateCreated&sortDirection=DESC
 ```
 
 Valid `sortField` values:
 
 | Entity | Valid sortField values | Default sortField |
 |---|---|---|
-| Accounts | `createdAt` | `createdAt` |
-| Contacts | `createdAt` | `createdAt` |
-| Subscriptions | `renewalDate` | `renewalDate` |
-| Cloud Files | `uploadDate` | `uploadDate` |
+| Accounts | `createdDate` | `createdDate` |
+| Contacts | `createdDate` | `createdDate` |
+| Subscriptions | `dateCreated` | `dateCreated` |
+| Cloud Files | none | none |
 
 ## DynamoDB access pattern
 
-The repository uses `QueryCommand`, not `ScanCommand`. Scans are intentionally prohibited due to DynamoDB cost considerations.
+The repository uses `QueryCommand` for indexed exact-match searches. List and filter views use server-side DynamoDB `ScanCommand` with projection and filter expressions because the provided real records do not include a shared synthetic partition key such as `entityType`.
 
 Required table keys and indexes:
 
-| Entity | Table | Primary key | Required search GSIs | Required sort GSIs |
-|---|---|---|---|---|
-| Accounts | `Accounts` | `id` | `name-index` on `name`; `industry-index` on `industry` | `entity-createdAt-index` on `entityType`, `createdAt` |
-| Contacts | `Contacts` | `id` | `email-index` on `email`; `accountId-index` on `accountId` | `entity-createdAt-index` on `entityType`, `createdAt` |
-| Subscriptions | `Subscriptions` | `id` | `accountId-index` on `accountId`; `plan-index` on `plan` | `entity-renewalDate-index` on `entityType`, `renewalDate` |
-| Cloud Files | `CloudFiles` | `id` | `fileName-index` on `fileName`; `uploadedBy-index` on `uploadedBy` | `entity-uploadDate-index` on `entityType`, `uploadDate` |
-
-The `entityType` partition values used by sort indexes are `ACCOUNT`, `CONTACT`, `SUBSCRIPTION`, and `CLOUD_FILE`.
+| Entity | Table | Primary key | Required search GSIs |
+|---|---|---|---|
+| Accounts | `Accounts` | `id` | `name-index` on `name`; `accountnumber-index` on `accountnumber`; `website-index` on `website` |
+| Contacts | `Contacts` | `id` | `name-index` on `name`; `email-index` on `email`; `account-name-index` on `account.Name` |
+| Subscriptions | `Subscriptions` | `﻿Subscription ID` | `customer-index` on `Customer`; `product-index` on `Product`; `subscription-id-index` on `﻿Subscription ID` |
+| Cloud Files | `CloudFiles` | `id` | `name-index` on `name`; `account-index` on `tva_cfb__account__c`; `id-index` on `id` |
 
 ## Production deployment
 

@@ -2,10 +2,12 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { env } from './env.js';
 
+const useLocalDynamoEndpoint = Boolean(env.dynamoDbEndpoint);
+
 const client = new DynamoDBClient({
   region: env.awsRegion,
-  endpoint: env.isLocal ? env.dynamoDbEndpoint : undefined,
-  credentials: env.isLocal
+  endpoint: useLocalDynamoEndpoint ? env.dynamoDbEndpoint : undefined,
+  credentials: useLocalDynamoEndpoint
     ? { accessKeyId: 'local', secretAccessKey: 'local' }
     : undefined
 });
