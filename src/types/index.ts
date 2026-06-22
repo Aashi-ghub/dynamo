@@ -56,4 +56,6 @@ export interface TableState {
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
+  nextToken?: string;
+  hasMore: boolean;
 }

@@ -23,7 +23,12 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'companyName', label: 'Company Name', type: 'text', required: true },
       { key: 'accountNumber', label: 'Account Number', type: 'text' },
       { key: 'active', label: 'Active', type: 'select', options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
-      { key: 'status', label: 'Status', type: 'select', options: [{ label: 'Pending', value: 'Pending' }] },
+      { key: 'status', label: 'Status', type: 'select', options: [
+        { label: 'Active', value: 'Active' },
+        { label: 'Inactive', value: 'Inactive' },
+        { label: 'Pending', value: 'Pending' },
+        { label: 'Canceled', value: 'Canceled' }
+      ] },
       { key: 'type', label: 'Type', type: 'text' },
       { key: 'industry', label: 'Industry', type: 'text' },
       { key: 'ownership', label: 'Ownership', type: 'text' },
@@ -97,7 +102,12 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'leadSource', label: 'Lead Source', type: 'text' },
       { key: 'languages', label: 'Languages', type: 'text' },
       { key: 'level', label: 'Level', type: 'text' },
-      { key: 'status', label: 'Status', type: 'select', options: [{ label: 'Pending', value: 'Pending' }] }
+      { key: 'status', label: 'Status', type: 'select', options: [
+        { label: 'Active', value: 'Active' },
+        { label: 'Inactive', value: 'Inactive' },
+        { label: 'Pending', value: 'Pending' },
+        { label: 'Canceled', value: 'Canceled' }
+      ] }
     ],
     detailGroups: [
       { label: 'General Information', fields: ['salutation', 'firstName', 'lastName', 'name', 'title', 'department', 'birthdate'] },
@@ -137,7 +147,13 @@ export const ENTITIES: Record<string, EntityConfig> = {
     fields: [
       { key: 'customer', label: 'Customer', type: 'text', required: true },
       { key: 'product', label: 'Product', type: 'text', required: true },
-      { key: 'status', label: 'Status', type: 'select', required: true, options: [{ label: 'Billing', value: 'Billing' }] },
+      { key: 'status', label: 'Status', type: 'select', required: true, options: [
+        { label: 'Billing', value: 'Billing' },
+        { label: 'Active', value: 'Active' },
+        { label: 'Inactive', value: 'Inactive' },
+        { label: 'Canceled', value: 'Canceled' },
+        { label: 'Pending', value: 'Pending' }
+      ] },
       { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID', type: 'text' },
       { key: 'productCode', label: 'Product Code', type: 'text' },
       { key: 'billingFrequency', label: 'Billing Frequency', type: 'text' },

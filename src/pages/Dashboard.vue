@@ -6,7 +6,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 class="text-lg font-semibold text-gray-900">{{ activeEntity.plural }}</h2>
           <div class="flex items-center space-x-3">
-            <button @click="fetchData" class="p-2 text-gray-400 hover:text-primary-600 transition-colors" title="Refresh">
+            <button @click="() => fetchData(true)" class="p-2 text-gray-400 hover:text-primary-600 transition-colors" title="Refresh">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </button>
             <button @click="openCreateModal"
@@ -22,7 +22,7 @@
             <div class="flex flex-col sm:flex-row gap-2">
               <select
                 v-model="entityStore.tableState.searchField"
-                @change="onFilterChange"
+                @change="onSearchFieldChange"
                 class="block w-full sm:w-auto sm:min-w-[140px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option v-for="field in activeEntity.searchableFields" :key="field.key" :value="field.key">{{ field.label }}</option>
@@ -40,7 +40,7 @@
           <div v-if="activeEntity.filters.status">
             <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Status</label>
             <select v-model="entityStore.tableState.status" @change="onFilterChange" class="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md bg-white">
-              <option :value="undefined">All Statuses</option>
+              <option value="">All Statuses</option>
               <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
@@ -131,13 +131,15 @@
     <!-- Pagination -->
     <div class="px-4 sm:px-6 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
       <div class="text-sm text-gray-700 text-center sm:text-left">
-        Showing <span class="font-semibold">{{ (entityStore.tableState.page - 1) * entityStore.tableState.limit + 1 }}</span> to <span class="font-semibold">{{ Math.min(entityStore.tableState.page * entityStore.tableState.limit, totalRecords) }}</span> of <span class="font-semibold">{{ totalRecords }}</span> results
+        Showing <span class="font-semibold">{{ resultStart }}</span> to <span class="font-semibold">{{ resultEnd }}</span>
+        <span v-if="hasNextPage"> (more available)</span>
       </div>
       <div class="flex items-center space-x-2">
-        <button @click="prevPage" :disabled="entityStore.tableState.page === 1" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <button @click="prevPage" :disabled="currentPageIndex === 0" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
           Previous
         </button>
-        <button @click="nextPage" :disabled="entityStore.tableState.page * entityStore.tableState.limit >= totalRecords" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <span class="text-sm text-gray-500 font-medium px-2">Page {{ currentPageIndex + 1 }}</span>
+        <button @click="nextPage" :disabled="!hasNextPage" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
           Next
         </button>
       </div>
@@ -169,6 +171,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import axios from 'axios';
 import { useEntityStore } from '../stores/entityStore';
 import { entityService } from '../services/entityService';
 import EntityModal from '../components/EntityModal.vue';
@@ -179,12 +182,16 @@ const entityStore = useEntityStore();
 const activeEntity = computed(() => entityStore.activeEntity);
 
 const records = ref<any[]>([]);
-const totalRecords = ref(0);
 const loading = ref(false);
 const searchInput = ref('');
 const companyInput = ref('');
 
-// Modal state
+const pageTokens = ref<(string | undefined)[]>([undefined]);
+const currentPageIndex = ref(0);
+const hasNextPage = ref(false);
+let fetchController: AbortController | null = null;
+let lastFetchKey = '';
+
 const modalState = ref({
   isOpen: false,
   mode: 'create' as 'create' | 'edit' | 'delete',
@@ -198,34 +205,106 @@ const detailState = ref({
   record: null as any
 });
 
-const fetchData = async () => {
+const buildFetchKey = (pageToken?: string) =>
+  JSON.stringify({
+    entityId: activeEntity.value.id,
+    pageToken: pageToken ?? '',
+    pageIndex: currentPageIndex.value,
+    state: {
+      limit: entityStore.tableState.limit,
+      search: entityStore.tableState.search?.trim() || '',
+      searchField: entityStore.tableState.searchField,
+      sortBy: entityStore.tableState.sortBy,
+      sortDesc: entityStore.tableState.sortDesc,
+      startDate: entityStore.tableState.startDate || '',
+      endDate: entityStore.tableState.endDate || '',
+      status: entityStore.tableState.status || '',
+      companyName: entityStore.tableState.companyName?.trim() || ''
+    }
+  });
+
+const resetPagination = () => {
+  pageTokens.value = [undefined];
+  currentPageIndex.value = 0;
+  hasNextPage.value = false;
+  entityStore.tableState.page = 1;
+};
+
+const syncLocalInputs = () => {
+  searchInput.value = entityStore.tableState.search || '';
+  companyInput.value = entityStore.tableState.companyName || '';
+};
+
+const fetchData = async (force = false) => {
+  const pageToken = pageTokens.value[currentPageIndex.value];
+  const fetchKey = buildFetchKey(pageToken);
+
+  if (!force && fetchKey === lastFetchKey) return;
+
+  fetchController?.abort();
+  fetchController = new AbortController();
+  const { signal } = fetchController;
+
   loading.value = true;
   try {
-    const res = await entityService.fetchRecords(activeEntity.value, entityStore.tableState);
+    const res = await entityService.fetchRecords(
+      activeEntity.value,
+      entityStore.tableState,
+      pageToken,
+      signal
+    );
     records.value = res.data;
-    totalRecords.value = res.total;
+    hasNextPage.value = res.hasMore;
+    if (res.nextToken) {
+      pageTokens.value[currentPageIndex.value + 1] = res.nextToken;
+    } else {
+      pageTokens.value = pageTokens.value.slice(0, currentPageIndex.value + 1);
+    }
+    entityStore.tableState.page = currentPageIndex.value + 1;
+    lastFetchKey = fetchKey;
   } catch (error) {
-    console.error("Failed to fetch records", error);
-    // In a real app, show a toast notification here
+    if (axios.isCancel(error) || (error as { code?: string }).code === 'ERR_CANCELED') return;
+    console.error('Failed to fetch records', error);
   } finally {
-    loading.value = false;
+    if (!signal.aborted) loading.value = false;
   }
 };
 
-const onSearch = debounce(() => {
-  entityStore.tableState.search = searchInput.value;
-  entityStore.tableState.page = 1;
-  fetchData();
-}, 300);
+const resultStart = computed(() => {
+  if (records.value.length === 0) return 0;
+  return currentPageIndex.value * entityStore.tableState.limit + 1;
+});
 
-const onCompanySearch = debounce(() => {
-  entityStore.tableState.companyName = companyInput.value;
-  entityStore.tableState.page = 1;
+const resultEnd = computed(() => currentPageIndex.value * entityStore.tableState.limit + records.value.length);
+
+const applySearchFilter = () => {
+  const nextSearch = searchInput.value.trim();
+  if (nextSearch === (entityStore.tableState.search || '')) return;
+  entityStore.tableState.search = nextSearch;
+  resetPagination();
   fetchData();
-}, 300);
+};
+
+const applyCompanyFilter = () => {
+  const nextCompany = companyInput.value.trim();
+  if (nextCompany === (entityStore.tableState.companyName || '')) return;
+  entityStore.tableState.companyName = nextCompany || undefined;
+  resetPagination();
+  fetchData();
+};
+
+const onSearch = debounce(applySearchFilter, 300);
+const onCompanySearch = debounce(applyCompanyFilter, 300);
+
+const onSearchFieldChange = () => {
+  if (!searchInput.value.trim()) return;
+  resetPagination();
+  fetchData();
+};
 
 const onFilterChange = () => {
-  entityStore.tableState.page = 1;
+  entityStore.tableState.status = entityStore.tableState.status || undefined;
+  resetPagination();
   fetchData();
 };
 
@@ -247,21 +326,20 @@ const sortBy = (key: string) => {
     entityStore.tableState.sortBy = key;
     entityStore.tableState.sortDesc = false;
   }
+  resetPagination();
   fetchData();
 };
 
 const prevPage = () => {
-  if (entityStore.tableState.page > 1) {
-    entityStore.tableState.page--;
-    fetchData();
-  }
+  if (currentPageIndex.value === 0) return;
+  currentPageIndex.value--;
+  fetchData();
 };
 
 const nextPage = () => {
-  if (entityStore.tableState.page * entityStore.tableState.limit < totalRecords.value) {
-    entityStore.tableState.page++;
-    fetchData();
-  }
+  if (!hasNextPage.value) return;
+  currentPageIndex.value++;
+  fetchData();
 };
 
 // Modal Actions
@@ -329,7 +407,8 @@ const handleSave = async (data: any) => {
       }
     }
     closeModal();
-    fetchData();
+    lastFetchKey = '';
+    fetchData(true);
   } catch (error) {
     console.error("Failed to save", error);
   } finally {
@@ -343,7 +422,8 @@ const handleDelete = async () => {
     await entityService.deleteRecord(activeEntity.value, modalState.value.record);
     closeModal();
     closeDetailView();
-    fetchData();
+    lastFetchKey = '';
+    fetchData(true);
   } catch (error) {
     console.error("Failed to delete", error);
   } finally {
@@ -351,18 +431,17 @@ const handleDelete = async () => {
   }
 };
 
-// Watch for entity change to refetch data
 watch(() => activeEntity.value.id, () => {
-  searchInput.value = '';
-  companyInput.value = '';
-  entityStore.tableState.searchField = activeEntity.value.searchableFields[0]?.key;
+  syncLocalInputs();
   closeDetailView();
   closeModal();
+  resetPagination();
+  lastFetchKey = '';
   fetchData();
 });
 
 onMounted(() => {
-  entityStore.tableState.searchField = activeEntity.value.searchableFields[0]?.key;
+  syncLocalInputs();
   fetchData();
 });
 

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import type { TableState } from '../types';
 import { ENTITIES } from '../config/entities';
 
@@ -44,5 +44,3 @@ export const useEntityStore = defineStore('entity', () => {
     setActiveEntity
   };
 });
-
-import { computed } from 'vue';
