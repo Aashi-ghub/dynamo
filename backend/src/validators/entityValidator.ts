@@ -67,8 +67,15 @@ export const validateCreateBody = (body: unknown, config: EntityConfig) => {
 
 export const validateUpdateBody = (body: unknown, config: EntityConfig) => {
   const record = validateCreateBody(body, { ...config, requiredFields: [] });
+  const keyFields = new Set([
+    ...Object.entries(config.fieldMap)
+      .filter(([, dynamoField]) => dynamoField === config.idField)
+      .map(([frontendField]) => frontendField),
+    ...(config.sortKeyField ? [config.sortKeyField] : [])
+  ]);
+
   for (const field of Object.keys(record)) {
-    if (reservedFields.has(field) || systemFields.has(field) || config.readonlyFields.includes(field) || !config.editableFields.includes(field)) {
+    if (reservedFields.has(field) || systemFields.has(field) || config.readonlyFields.includes(field) || keyFields.has(field) || !config.editableFields.includes(field)) {
       throw badRequest('Validation failed', [{ field, message: 'Field cannot be updated directly' }]);
     }
   }

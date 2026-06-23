@@ -4,7 +4,7 @@ import { dynamoToFrontend, type EntityConfig } from '../config/entities.js';
 import type { BusinessRecord } from '../models/businessRecord.js';
 import type { DynamoEntityRepository } from '../repositories/dynamoEntityRepository.js';
 import type { AuthUser, ListQuery } from '../types/api.js';
-import { notFound } from '../utils/errors.js';
+import { notFound, badRequest } from '../utils/errors.js';
 
 export class EntityService {
   constructor(
@@ -44,7 +44,10 @@ export class EntityService {
   }
 
   async update(id: string, patch: Record<string, unknown>, user?: AuthUser, sortKey?: string | boolean | number) {
-    const rawPatch = this.toDynamo(patch);
+    const rawPatch = this.stripKeyFields(this.toDynamo(patch));
+    if (Object.keys(rawPatch).length === 0) {
+      throw badRequest('Validation failed', [{ field: 'body', message: 'No updatable fields were provided' }]);
+    }
     if (this.config.fieldMap.lastModifiedDate) rawPatch[this.config.fieldMap.lastModifiedDate] = Date.now();
     if (this.config.fieldMap.lastModifiedById && user?.sub) rawPatch[this.config.fieldMap.lastModifiedById] = user.sub;
     const updated = await this.repository.update(id, rawPatch, sortKey);
@@ -77,6 +80,16 @@ export class EntityService {
       if (rawField) raw[rawField] = value;
     }
     return raw;
+  }
+
+  private stripKeyFields(raw: Record<string, unknown>) {
+    const next = { ...raw };
+    delete next[this.config.idField];
+    if (this.config.sortKeyField) {
+      const rawSortKey = this.config.fieldMap[this.config.sortKeyField];
+      if (rawSortKey) delete next[rawSortKey];
+    }
+    return next;
   }
 
   private toFrontend(record: BusinessRecord) {

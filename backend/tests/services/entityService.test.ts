@@ -40,4 +40,33 @@ describe('EntityService', () => {
     await expect(service.delete('a1')).resolves.toEqual({ id: 'a1', deleted: true });
     expect(repo.hardDelete).toHaveBeenCalledWith('a1', undefined);
   });
+
+  it('strips composite key fields from subscription updates', async () => {
+    const repo = repository();
+    const service = new EntityService(repo as any, entityConfigs.subscriptions);
+
+    await service.update('590499', {
+      clientNetSuiteAccountId: '590499',
+      productCode: 'IC',
+      customer: 'Updated Customer',
+      status: 'Active'
+    }, undefined, 'IC');
+
+    expect(repo.update).toHaveBeenCalledWith(
+      '590499',
+      expect.not.objectContaining({
+        'Client NetSuite Account ID': '590499',
+        'Product Code': 'IC'
+      }),
+      'IC'
+    );
+    expect(repo.update).toHaveBeenCalledWith(
+      '590499',
+      expect.objectContaining({
+        Customer: 'Updated Customer',
+        Status: 'Active'
+      }),
+      'IC'
+    );
+  });
 });

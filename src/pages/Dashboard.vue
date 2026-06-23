@@ -425,7 +425,13 @@ const handleSave = async (data: any) => {
     lastFetchKey = '';
     fetchData(true);
   } catch (error) {
-    console.error("Failed to save", error);
+    console.error('Failed to save', error);
+    const message = axios.isAxiosError(error)
+      ? error.response?.data?.message || error.response?.data?.error || error.message
+      : error instanceof Error
+        ? error.message
+        : 'Failed to save record';
+    window.alert(message);
   } finally {
     loading.value = false;
   }

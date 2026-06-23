@@ -47,8 +47,11 @@
         </div>
 
         <!-- Create / Edit / View Form -->
-        <form v-else class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitForm">
+        <form v-else class="flex min-h-0 flex-1 flex-col" novalidate @submit.prevent="submitForm">
           <div class="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+            <p v-if="saveError" class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {{ saveError }}
+            </p>
             <div class="space-y-8">
               <section v-for="section in formSections" :key="section.label || 'default'">
                 <h4
@@ -69,9 +72,9 @@
                       <span v-if="field.required" class="text-red-500">*</span>
                     </label>
 
-                    <!-- View Mode -->
+                    <!-- View / read-only Mode -->
                     <div
-                      v-if="props.mode === 'view'"
+                      v-if="isFieldReadOnly(field)"
                       class="min-h-[2.5rem] rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-relaxed text-gray-900 break-words"
                     >
                       {{ formatDisplayValue(field, formData[field.key]) }}
@@ -83,11 +86,19 @@
                         v-if="field.type === 'select'"
                         :id="field.key"
                         v-model="formData[field.key]"
-                        :required="field.required"
+                        :required="props.mode === 'create' && field.required"
                         class="field-input"
                       >
-                        <option value="" disabled>Select {{ field.label }}</option>
-                        <option v-for="opt in field.options" :key="opt.value" :value="opt.value">
+                        <option v-if="props.mode === 'create' || !formData[field.key]" value="" disabled>
+                          Select {{ field.label }}
+                        </option>
+                        <option
+                          v-if="hasCustomSelectValue(field)"
+                          :value="formData[field.key]"
+                        >
+                          {{ formData[field.key] }}
+                        </option>
+                        <option v-for="opt in field.options" :key="String(opt.value)" :value="opt.value">
                           {{ opt.label }}
                         </option>
                       </select>
@@ -106,17 +117,17 @@
                         v-else-if="field.type === 'textarea'"
                         :id="field.key"
                         v-model="formData[field.key]"
-                        :required="field.required"
+                        :required="props.mode === 'create' && field.required"
                         rows="4"
                         class="field-input resize-y"
                       ></textarea>
 
                       <input
                         v-else
-                        :type="field.type === 'date' ? 'date' : field.type"
+                        :type="field.type === 'date' ? 'date' : fieldInputType(field)"
                         :id="field.key"
                         v-model="formData[field.key]"
-                        :required="field.required"
+                        :required="props.mode === 'create' && field.required"
                         class="field-input"
                       />
                     </template>
@@ -174,10 +185,22 @@ const emit = defineEmits(['close', 'save', 'delete']);
 
 const editableKeys = computed(() => props.entity.fields.map((field) => field.key));
 
-const isReadonlyField = (fieldKey: string) => props.entity.readonlyFields?.includes(fieldKey) ?? false;
+const isReadonlyField = (fieldKey: string) => {
+  if (props.entity.readonlyFields?.includes(fieldKey)) return true;
+  if (props.mode === 'edit') {
+    if (fieldKey === props.entity.partitionKeyField) return true;
+    if (props.entity.sortKeyField && fieldKey === props.entity.sortKeyField) return true;
+  }
+  return false;
+};
+
+const isFieldReadOnly = (field: EntityField) => props.mode === 'view' || isReadonlyField(field.key);
 
 const shouldShowField = (field: EntityField) => {
   if (props.mode === 'view') return true;
+  if (props.mode === 'edit' && (field.key === props.entity.partitionKeyField || field.key === props.entity.sortKeyField)) {
+    return true;
+  }
   return !isReadonlyField(field.key);
 };
 
@@ -223,6 +246,23 @@ const buildFormData = (record: Record<string, any> | null | undefined) => {
 };
 
 const formData = ref<any>(buildFormData(props.record));
+const saveError = ref('');
+
+const visibleFieldKeys = computed(() =>
+  formSections.value.flatMap((section) => section.fields.map((field) => field.key))
+);
+
+const fieldInputType = (field: EntityField) => {
+  if (field.type === 'number') return 'text';
+  if (field.type === 'email') return 'text';
+  return field.type;
+};
+
+const hasCustomSelectValue = (field: EntityField) => {
+  const value = formData.value[field.key];
+  if (value === '' || value === null || value === undefined) return false;
+  return !field.options?.some((option) => option.value === value);
+};
 
 const modeTitle = computed(() => {
   if (props.mode === 'create') return `Create ${props.entity.name}`;
@@ -244,13 +284,33 @@ const formatDisplayValue = (field: EntityField, value: unknown) => {
 
 watch(() => props.record, (newRecord) => {
   formData.value = buildFormData(newRecord);
+  saveError.value = '';
 }, { deep: true, immediate: true });
 
 const submitForm = () => {
+  saveError.value = '';
+
+  if (props.mode === 'create') {
+    const missingRequired = formSections.value
+      .flatMap((section) => section.fields)
+      .filter((field) => field.required)
+      .find((field) => {
+        const value = formData.value[field.key];
+        return value === '' || value === null || value === undefined;
+      });
+
+    if (missingRequired) {
+      saveError.value = `${missingRequired.label} is required.`;
+      return;
+    }
+  }
+
   const payload: Record<string, any> = {};
-  for (const key of editableKeys.value) {
-    if (props.mode !== 'view' && isReadonlyField(key)) continue;
-    payload[key] = formData.value[key];
+  for (const key of visibleFieldKeys.value) {
+    if (isReadonlyField(key)) continue;
+    const value = formData.value[key];
+    if (value === '') continue;
+    payload[key] = value;
   }
   emit('save', payload);
 };
