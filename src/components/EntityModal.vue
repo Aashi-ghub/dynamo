@@ -204,14 +204,14 @@ const fieldSpanClass = (field: EntityField) => {
 
 const toFormValue = (fieldKey: string, value: unknown) => {
   const field = props.entity.fields.find((item) => item.key === fieldKey);
+  if (field?.type === 'boolean') {
+    return Boolean(value);
+  }
   if (field?.type === 'date' && value) {
     const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
     return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
   }
-  if (field?.type === 'boolean') {
-    return Boolean(value);
-  }
-  return value ?? (field?.type === 'boolean' ? false : '');
+  return value ?? '';
 };
 
 const buildFormData = (record: Record<string, any> | null | undefined) => {
