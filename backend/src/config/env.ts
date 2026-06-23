@@ -5,10 +5,12 @@ if (process.env.ENV_FILE) {
   const localAppEnv = process.env.APP_ENV;
   const localSkipAuth = process.env.SKIP_AUTH;
   const localEnvFile = process.env.ENV_FILE;
+  const localSubscriptionsTable = process.env.SUBSCRIPTIONS_TABLE;
   dotenv.config({ path: process.env.ENV_FILE, override: true });
   if (localAppEnv !== undefined) process.env.APP_ENV = localAppEnv;
   if (localSkipAuth !== undefined) process.env.SKIP_AUTH = localSkipAuth;
   if (localEnvFile !== undefined) process.env.ENV_FILE = localEnvFile;
+  if (localSubscriptionsTable !== undefined) process.env.SUBSCRIPTIONS_TABLE = localSubscriptionsTable;
 }
 const requestedEnv = process.env.APP_ENV?.toLowerCase() || 'local';
 if (!process.env.ENV_FILE && requestedEnv !== 'local') {
