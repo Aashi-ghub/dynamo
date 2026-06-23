@@ -1,0 +1,20 @@
+{
+  "experimentalServices": {
+    "frontend": {
+      "entrypoint": ".",
+      "routePrefix": "/",
+      "framework": "vite"
+    },
+    "backend": {
+      "entrypoint": "backend",
+      "routePrefix": "/_/backend",
+      "framework": "express"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!_/backend/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
