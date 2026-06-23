@@ -70,7 +70,7 @@
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div v-for="item in summaryFields" :key="item.key">
                 <p class="text-xs font-medium uppercase text-gray-500">{{ item.label }}</p>
-                <p class="mt-1 break-words text-sm font-medium text-gray-900">{{ formatValue(item.value) }}</p>
+                <p class="mt-1 break-words text-sm font-medium text-gray-900">{{ formatValue(item.value, item.key) }}</p>
               </div>
             </div>
           </section>
@@ -84,7 +84,7 @@
                 <dt class="text-xs font-medium uppercase text-gray-500">{{ field.label }}</dt>
                 <dd class="mt-2 break-words text-sm text-gray-900">
                   <pre v-if="isStructured(field.value)" class="whitespace-pre-wrap rounded-md bg-gray-50 p-3 text-xs text-gray-800 overflow-x-auto">{{ formatValue(field.value) }}</pre>
-                  <span v-else>{{ formatValue(field.value) }}</span>
+                  <span v-else>{{ formatValue(field.value, field.key) }}</span>
                 </dd>
               </div>
             </dl>
@@ -168,8 +168,9 @@ const emitDelete = () => {
   if (props.record) emit('delete', props.record);
 };
 
-const formatValue = (value: unknown) => {
+const formatValue = (value: unknown, key?: string) => {
   if (value === null || value === undefined || value === '') return '-';
+  if (key === 'deactivateSubscription' && typeof value === 'boolean') return value ? 'Deactivated' : 'Active';
   if (value instanceof Date) return value.toLocaleString();
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (isStructured(value)) return JSON.stringify(value, null, 2);

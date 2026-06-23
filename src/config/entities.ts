@@ -162,7 +162,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'clientNotificationsSuiteletUrl', label: 'Client Notifications Suitelet URL', type: 'text' },
       { key: 'clientPointOfContact', label: 'Client Point Of Contact', type: 'text' },
       { key: 'contractType', label: 'Contract Type', type: 'text' },
-      { key: 'deactivateSubscription', label: 'Deactivate Subscription', type: 'boolean' },
+      { key: 'deactivateSubscription', label: 'Deactivate subscription', type: 'boolean' },
       { key: 'endOfTrialPeriod', label: 'End Of Trial Period', type: 'date' },
       { key: 'freeTrialSignupCompany', label: 'Free Trial Signup Company', type: 'text' },
       { key: 'freeTrialSignupEmailAddress', label: 'Free Trial Signup Email Address', type: 'email' },
@@ -182,13 +182,12 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'version', label: 'Version', type: 'text' }
     ],
     detailGroups: [
-      { label: 'General Information', fields: ['subscriptionId', 'customer', 'clientNetSuiteAccountId', 'status', 'subscriptionType', 'contractType'] },
+      { label: 'General Information', fields: ['subscriptionId', 'customer', 'clientNetSuiteAccountId', 'status', 'deactivateSubscription', 'subscriptionType', 'contractType'] },
       { label: 'Product Information', fields: ['product', 'productCode', 'version', 'numberOfUsers'] },
       { label: 'Billing Information', fields: ['billingFrequency', 'price', 'priceUsd', 'nextBillDate', 'transaction'] },
       { label: 'Subscription Dates', fields: ['dateCreated', 'subscriptionStartDate', 'subscriptionEndDate', 'endOfTrialPeriod'] },
       { label: 'Trial Signup Information', fields: ['freeTrialSignupCompany', 'freeTrialSignupEmailAddress', 'freeTrialSignupName', 'freeTrialSignupPhone'] },
       { label: 'Contact / Notification Information', fields: ['clientPointOfContact', 'clientNotificationsSuiteletUrl'] },
-      { label: 'Status Flags', fields: ['deactivateSubscription', 'inactive', 'subscriptionInactive'] },
       { label: 'Notes', fields: ['remarks'] }
     ],
     readonlyFields: ['subscriptionId', 'dateCreated'],

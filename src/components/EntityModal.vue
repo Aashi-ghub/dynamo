@@ -67,7 +67,11 @@
                     :key="field.key"
                     :class="fieldSpanClass(field)"
                   >
-                    <label :for="field.key" class="mb-1.5 block text-sm font-medium leading-snug text-gray-700">
+                    <label
+                      v-if="field.type !== 'boolean'"
+                      :for="field.key"
+                      class="mb-1.5 block text-sm font-medium leading-snug text-gray-700"
+                    >
                       {{ field.label }}
                       <span v-if="field.required" class="text-red-500">*</span>
                     </label>
@@ -103,15 +107,19 @@
                         </option>
                       </select>
 
-                      <div v-else-if="field.type === 'boolean'" class="flex min-h-[2.5rem] items-center">
+                      <label
+                        v-else-if="field.type === 'boolean'"
+                        :for="field.key"
+                        class="flex min-h-[2.75rem] cursor-pointer items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5"
+                      >
                         <input
                           :id="field.key"
                           v-model="formData[field.key]"
                           type="checkbox"
                           class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
-                        <label :for="field.key" class="ml-2 text-sm text-gray-600">Enabled</label>
-                      </div>
+                        <span class="text-sm text-gray-700">{{ field.label }}</span>
+                      </label>
 
                       <textarea
                         v-else-if="field.type === 'textarea'"
@@ -222,6 +230,7 @@ const formSections = computed(() => {
 
 const fieldSpanClass = (field: EntityField) => {
   if (field.type === 'textarea') return 'md:col-span-2';
+  if (field.type === 'boolean') return 'md:col-span-2';
   return '';
 };
 
@@ -278,7 +287,10 @@ const formatDisplayValue = (field: EntityField, value: unknown) => {
     const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
   }
-  if (field.type === 'boolean') return value ? 'Yes' : 'No';
+  if (field.type === 'boolean') {
+    if (field.key === 'deactivateSubscription') return value ? 'Deactivated' : 'Active';
+    return value ? 'Yes' : 'No';
+  }
   return String(value);
 };
 
@@ -309,6 +321,11 @@ const submitForm = () => {
   for (const key of visibleFieldKeys.value) {
     if (isReadonlyField(key)) continue;
     const value = formData.value[key];
+    const field = props.entity.fields.find((item) => item.key === key);
+    if (field?.type === 'boolean') {
+      payload[key] = Boolean(value);
+      continue;
+    }
     if (value === '') continue;
     payload[key] = value;
   }
