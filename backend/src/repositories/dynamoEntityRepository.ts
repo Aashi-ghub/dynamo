@@ -195,6 +195,7 @@ export class DynamoEntityRepository {
   private decodeSearchCursor(token?: string) {
     if (!token) return { pendingMatches: [] as BusinessRecord[] };
     const decoded = decodeNextToken(token);
+    if (!decoded) return { pendingMatches: [] as BusinessRecord[] };
     if ('pendingMatches' in decoded || 'exclusiveStartKey' in decoded) {
       return {
         exclusiveStartKey: decoded.exclusiveStartKey as Record<string, unknown> | undefined,
