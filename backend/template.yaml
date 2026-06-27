@@ -77,7 +77,8 @@ Resources:
         DefaultAuthorizer: CognitoAuthorizer
       CorsConfiguration:
         AllowOrigins:
-          - !Ref AllowedOrigins
+          - "https://di58r81ejzy3.cloudfront.net"
+          - "http://localhost:5173"
         AllowHeaders:
           - authorization
           - content-type

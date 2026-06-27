@@ -18,6 +18,10 @@ export const createApp = () => {
       credentials: true
     })
   );
+  app.options('*', cors({
+    origin: env.allowedOrigins.length ? env.allowedOrigins : true,
+    credentials: true
+  }));
   app.use(express.json({ limit: '256kb' }));
   app.use(requestContext);
   app.use(logRequest);
