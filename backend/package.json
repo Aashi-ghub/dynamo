@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sam:build": "sam build",
-    "sam:deploy": "sam deploy --guided"
+    "sam:deploy": "sam build && sam deploy",
+    "sam:deploy:staging": "sam build && sam deploy --config-env staging",
+    "sam:deploy:prod": "sam build && sam deploy --config-env prod"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.699.0",
@@ -25,7 +27,8 @@
     "express": "^4.21.1",
     "helmet": "^8.0.0",
     "uuid": "^11.0.3",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "esbuild": "^0.25.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.146",

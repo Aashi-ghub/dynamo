@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Business Data Portal CRUD API
+Parameters:
+  AppEnv:
+    Type: String
+    AllowedValues:
+    - DEV
+    - STAGING
+    - PROD
+    Default: DEV
+  CognitoUserPoolId:
+    Type: String
+    NoEcho: false
+  CognitoClientId:
+    Type: String
+    NoEcho: false
+  AllowedOrigins:
+    Type: String
+    Default: ''
+  AccountsTableName:
+    Type: String
+    Default: Accounts
+  ContactsTableName:
+    Type: String
+    Default: Contacts
+  SubscriptionsTableName:
+    Type: String
+    Default: Subscriptions
+  CloudFilesTableName:
+    Type: String
+    Default: CloudFiles
+  DeleteMode:
+    Type: String
+    AllowedValues:
+    - hard
+    - soft
+    Default: hard
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+    - arm64
+    MemorySize: 256
+    Timeout: 10
+    Tracing: Disabled
+    Environment:
+      Variables:
+        APP_ENV:
+          Ref: AppEnv
+        DEV_AUTH_BYPASS: 'false'
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+        COGNITO_USER_POOL_ID:
+          Ref: CognitoUserPoolId
+        COGNITO_CLIENT_ID:
+          Ref: CognitoClientId
+        ALLOWED_ORIGINS:
+          Ref: AllowedOrigins
+        ACCOUNTS_TABLE:
+          Ref: AccountsTableName
+        CONTACTS_TABLE:
+          Ref: ContactsTableName
+        SUBSCRIPTIONS_TABLE:
+          Ref: SubscriptionsTableName
+        CLOUD_FILES_TABLE:
+          Ref: CloudFilesTableName
+        DEFAULT_PAGE_SIZE: '25'
+        MAX_PAGE_SIZE: '100'
+        DELETE_MODE:
+          Ref: DeleteMode
+Resources:
+  CrudApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer:
+                Fn::Sub: https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}
+              audience:
+              - Ref: CognitoClientId
+            IdentitySource: $request.header.Authorization
+        DefaultAuthorizer: CognitoAuthorizer
+      CorsConfiguration:
+        AllowOrigins:
+        - Ref: AllowedOrigins
+        AllowHeaders:
+        - authorization
+        - content-type
+        - x-request-id
+        AllowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+  CrudApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: business-data-portal-crud-${AppEnv}
+      CodeUri: CrudApiFunction
+      Handler: lambda.handler
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          Resource:
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AccountsTableName}
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AccountsTableName}/index/*
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ContactsTableName}
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ContactsTableName}/index/*
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SubscriptionsTableName}
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SubscriptionsTableName}/index/*
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${CloudFilesTableName}
+          - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${CloudFilesTableName}/index/*
+      Events:
+        Proxy:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: CrudApi
+            Path: /{proxy+}
+            Method: ANY
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: CrudApi
+            Path: /
+            Method: ANY
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+        - src/lambda.ts
+        Minify: true
+        Sourcemap: false
+        Target: es2022
+      SamResourceId: CrudApiFunction
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint
+    Value:
+      Fn::Sub: https://${CrudApi}.execute-api.${AWS::Region}.amazonaws.com

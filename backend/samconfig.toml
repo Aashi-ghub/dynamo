@@ -1,0 +1,110 @@
+# SAM CLI configuration — run from backend/:  sam deploy
+# Or use npm:  npm run sam:deploy
+#
+# Switch environment:
+#   sam deploy --config-env staging
+#   sam deploy --config-env prod
+
+version = 0.1
+
+[default.global.parameters]
+stack_name = "business-data-portal-dev"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+stack_name = "business-data-portal-dev"
+region = "us-east-1"
+resolve_s3 = true
+s3_prefix = "business-data-portal"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+image_repositories = []
+parameter_overrides = [
+  "AppEnv=DEV",
+  "CognitoUserPoolId=us-east-1_2IKHEP3rl",
+  "CognitoClientId=237pf5etf060j80kuojv44jp6",
+  "AllowedOrigins=http://localhost:5173",
+  "AccountsTableName=Accounts",
+  "ContactsTableName=Contacts",
+  "SubscriptionsTableName=Subscriptions",
+  "CloudFilesTableName=CloudFiles",
+  "DeleteMode=hard",
+]
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[default.local_start_lambda.parameters]
+warm_containers = "EAGER"
+
+[default.sync.parameters]
+watch = true
+
+# ---------------------------------------------------------------------------
+# Staging — deploy with:  sam deploy --config-env staging
+# ---------------------------------------------------------------------------
+
+[staging.global.parameters]
+stack_name = "business-data-portal-staging"
+
+[staging.build.parameters]
+cached = true
+parallel = true
+
+[staging.deploy.parameters]
+stack_name = "business-data-portal-staging"
+region = "us-east-1"
+resolve_s3 = true
+s3_prefix = "business-data-portal"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+  "AppEnv=STAGING",
+  "CognitoUserPoolId=us-east-1_2IKHEP3rl",
+  "CognitoClientId=237pf5etf060j80kuojv44jp6",
+  "AllowedOrigins=https://di58r81ejzy3.cloudfront.net",
+  "AccountsTableName=Accounts",
+  "ContactsTableName=Contacts",
+  "SubscriptionsTableName=Subscriptions",
+  "CloudFilesTableName=CloudFiles",
+  "DeleteMode=soft",
+]
+
+# ---------------------------------------------------------------------------
+# Production — deploy with:  sam deploy --config-env prod
+# ---------------------------------------------------------------------------
+
+[prod.global.parameters]
+stack_name = "business-data-portal-prod"
+
+[prod.build.parameters]
+cached = true
+parallel = true
+
+[prod.deploy.parameters]
+stack_name = "business-data-portal-prod"
+region = "us-east-1"
+resolve_s3 = true
+s3_prefix = "business-data-portal"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = [
+  "AppEnv=PROD",
+  "CognitoUserPoolId=us-east-1_2IKHEP3rl",
+  "CognitoClientId=237pf5etf060j80kuojv44jp6",
+  "AllowedOrigins=https://di58r81ejzy3.cloudfront.net",
+  "AccountsTableName=Accounts",
+  "ContactsTableName=Contacts",
+  "SubscriptionsTableName=Subscriptions",
+  "CloudFilesTableName=CloudFiles",
+  "DeleteMode=soft",
+]
