@@ -217,7 +217,7 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     idField: 'Client NetSuite Account ID',
     sortKeyField: 'productCode',
     fieldMap: subscriptionFieldMap,
-    requiredFields: ['customer', 'product', 'status'],
+    requiredFields: ['customer', 'product', 'status', 'productCode'],
     editableFields: subscriptionEditable,
     readonlyFields: ['subscriptionId', 'dateCreated'],
     searchableFields: { customer: 'customer-index', product: 'product-index', subscriptionId: 'subscription-id-index' },

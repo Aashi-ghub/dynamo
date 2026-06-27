@@ -90,7 +90,7 @@
                         v-if="field.type === 'select'"
                         :id="field.key"
                         v-model="formData[field.key]"
-                        :required="props.mode === 'create' && field.required"
+                        :required="field.required"
                         class="field-input"
                       >
                         <option v-if="props.mode === 'create' || !formData[field.key]" value="" disabled>
@@ -125,7 +125,7 @@
                         v-else-if="field.type === 'textarea'"
                         :id="field.key"
                         v-model="formData[field.key]"
-                        :required="props.mode === 'create' && field.required"
+                        :required="field.required"
                         rows="4"
                         class="field-input resize-y"
                       ></textarea>
@@ -135,7 +135,7 @@
                         :type="field.type === 'date' ? 'date' : fieldInputType(field)"
                         :id="field.key"
                         v-model="formData[field.key]"
-                        :required="props.mode === 'create' && field.required"
+                        :required="field.required"
                         class="field-input"
                       />
                     </template>
@@ -180,6 +180,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { EntityConfig } from '../types';
+import { formatDateDisplay, toDateInputValue } from '../utils/dateFormat';
 
 type EntityField = EntityConfig['fields'][number];
 
@@ -240,8 +241,7 @@ const toFormValue = (fieldKey: string, value: unknown) => {
     return Boolean(value);
   }
   if (field?.type === 'date' && value) {
-    const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
-    return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
+    return toDateInputValue(value);
   }
   return value ?? '';
 };
@@ -283,10 +283,7 @@ const modeTitle = computed(() => {
 
 const formatDisplayValue = (field: EntityField, value: unknown) => {
   if (value === null || value === undefined || value === '') return '-';
-  if (field.type === 'date') {
-    const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
-  }
+  if (field.type === 'date') return formatDateDisplay(value);
   if (field.type === 'boolean') {
     if (field.key === 'deactivateSubscription') return value ? 'Deactivated' : 'Active';
     return value ? 'Yes' : 'No';
@@ -302,7 +299,7 @@ watch(() => props.record, (newRecord) => {
 const submitForm = () => {
   saveError.value = '';
 
-  if (props.mode === 'create') {
+  if (props.mode === 'create' || props.mode === 'edit') {
     const missingRequired = formSections.value
       .flatMap((section) => section.fields)
       .filter((field) => field.required)

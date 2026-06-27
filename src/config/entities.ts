@@ -1,4 +1,5 @@
 import type { EntityConfig } from '../types';
+import { PRODUCT_CODE_OPTIONS, SUBSCRIPTION_STATUS_OPTIONS } from './subscriptionConstants';
 
 export const ENTITIES: Record<string, EntityConfig> = {
   accounts: {
@@ -149,15 +150,9 @@ export const ENTITIES: Record<string, EntityConfig> = {
     fields: [
       { key: 'customer', label: 'Customer', type: 'text', required: true },
       { key: 'product', label: 'Product', type: 'text', required: true },
-      { key: 'status', label: 'Status', type: 'select', required: true, options: [
-        { label: 'Billing', value: 'Billing' },
-        { label: 'Active', value: 'Active' },
-        { label: 'Inactive', value: 'Inactive' },
-        { label: 'Canceled', value: 'Canceled' },
-        { label: 'Pending', value: 'Pending' }
-      ] },
+      { key: 'status', label: 'Status', type: 'select', required: true, options: SUBSCRIPTION_STATUS_OPTIONS },
       { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID', type: 'text' },
-      { key: 'productCode', label: 'Product Code', type: 'text' },
+      { key: 'productCode', label: 'Product Code', type: 'select', required: true, options: PRODUCT_CODE_OPTIONS },
       { key: 'billingFrequency', label: 'Billing Frequency', type: 'text' },
       { key: 'clientNotificationsSuiteletUrl', label: 'Client Notifications Suitelet URL', type: 'text' },
       { key: 'clientPointOfContact', label: 'Client Point Of Contact', type: 'text' },

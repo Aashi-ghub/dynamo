@@ -98,6 +98,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { EntityConfig } from '../types';
+import { formatDateDisplay } from '../utils/dateFormat';
 
 const props = defineProps<{
   entity: EntityConfig;
@@ -111,6 +112,14 @@ const emit = defineEmits<{
   edit: [record: Record<string, any>];
   delete: [record: Record<string, any>];
 }>();
+
+const dateFieldKeys = computed(() => {
+  const keys = new Set(props.entity.fields.filter((field) => field.type === 'date').map((field) => field.key));
+  for (const column of props.entity.columns) {
+    if (column.type === 'date') keys.add(column.key);
+  }
+  return keys;
+});
 
 const knownLabels = computed(() => {
   const labels = new Map<string, string>();
@@ -171,17 +180,12 @@ const emitDelete = () => {
 const formatValue = (value: unknown, key?: string) => {
   if (value === null || value === undefined || value === '') return '-';
   if (key === 'deactivateSubscription' && typeof value === 'boolean') return value ? 'Deactivated' : 'Active';
-  if (value instanceof Date) return value.toLocaleString();
+  if (key && dateFieldKeys.value.has(key)) return formatDateDisplay(value);
+  if (value instanceof Date) return formatDateDisplay(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (isStructured(value)) return JSON.stringify(value, null, 2);
-  if (typeof value === 'number' && value > 100000000000) {
-    const date = new Date(value);
-    if (!Number.isNaN(date.getTime())) return date.toLocaleString();
-  }
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
-    const date = new Date(value);
-    if (!Number.isNaN(date.getTime())) return date.toLocaleString();
-  }
+  if (typeof value === 'number' && value > 100000000000) return formatDateDisplay(value);
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return formatDateDisplay(value);
   return String(value);
 };
 </script>

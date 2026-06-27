@@ -109,9 +109,7 @@
             <tr v-for="record in records" :key="record[activeEntity.partitionKeyField] || record.id || record.subscriptionId" class="hover:bg-primary-50/30 transition-colors">
               <td v-for="col in activeEntity.columns" :key="col.key" class="px-4 sm:px-6 py-4 text-sm text-gray-900 max-w-xs">
                 <span v-if="col.type === 'status'" :class="[
-                  record[col.key] === 'Active' ? 'bg-green-100 text-green-800' :
-                  record[col.key] === 'Inactive' || record[col.key] === 'Canceled' ? 'bg-red-100 text-red-800' :
-                  'bg-primary-100 text-primary-800',
+                  statusBadgeClass(record[col.key]),
                   'px-2.5 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap'
                 ]">
                   {{ record[col.key] }}
@@ -181,6 +179,7 @@ import { entityService } from '../services/entityService';
 import EntityModal from '../components/EntityModal.vue';
 import RecordDetailView from '../components/RecordDetailView.vue';
 import { debounce } from '../utils/debounce';
+import { formatDateDisplay } from '../utils/dateFormat';
 
 const entityStore = useEntityStore();
 const activeEntity = computed(() => entityStore.activeEntity);
@@ -468,11 +467,19 @@ onMounted(() => {
 
 const formatValue = (value: unknown, type?: string) => {
   if (value === null || value === undefined || value === '') return '-';
-  if (type === 'date') {
-    const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value));
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
-  }
+  if (type === 'date') return formatDateDisplay(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value);
+};
+
+const statusBadgeClass = (status: unknown) => {
+  const value = String(status ?? '');
+  if (value === 'Billing' || value === 'Active') return 'bg-green-100 text-green-800';
+  if (value === 'Cancelled' || value === 'Expired' || value === 'Inactive' || value === 'Canceled') {
+    return 'bg-red-100 text-red-800';
+  }
+  if (value === 'On Hold') return 'bg-yellow-100 text-yellow-800';
+  if (value === 'Grace Period') return 'bg-orange-100 text-orange-800';
+  return 'bg-primary-100 text-primary-800';
 };
 </script>
