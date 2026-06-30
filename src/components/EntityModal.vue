@@ -325,6 +325,12 @@ const submitForm = () => {
       payload[key] = Boolean(value);
       continue;
     }
+    if (field?.type === 'number') {
+      if (value === '' || value === null || value === undefined) continue;
+      const num = Number(value);
+      payload[key] = isNaN(num) ? value : num;
+      continue;
+    }
     if (value === '') continue;
     payload[key] = value;
   }

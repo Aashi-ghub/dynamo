@@ -231,7 +231,7 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
       product: { indexName: 'product-index', partitionKey: 'Product' },
       subscriptionId: { indexName: 'subscription-id-index', partitionKey: '\uFEFFSubscription ID' }
     },
-    softDeleteField: 'subscriptionInactive',
+    softDeleteField: 'appDeleted',
     softDeleteValue: true
   },
   cloudFiles: {

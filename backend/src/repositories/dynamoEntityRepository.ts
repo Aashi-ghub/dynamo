@@ -197,6 +197,14 @@ export class DynamoEntityRepository {
       }
     }
 
+    if (this.config.softDeleteField && this.config.softDeleteValue !== undefined) {
+      const rawField = this.toDynamoField(this.config.softDeleteField);
+      const token = this.token(`softdelete_${this.config.softDeleteField}`);
+      names[`#${token}`] = rawField;
+      values[`:${token}`] = this.config.softDeleteValue;
+      filterParts.push(`(attribute_not_exists(#${token}) OR #${token} <> :${token})`);
+    }
+
     const projectedRawFields = this.config.listAttributes.map((field) => this.toDynamoField(field));
     projectedRawFields.forEach((field, index) => {
       names[`#proj_${index}`] = field;
