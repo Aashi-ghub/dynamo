@@ -4,8 +4,8 @@ import type { TableState } from '../types';
 import { ENTITIES } from '../config/entities';
 
 export const useEntityStore = defineStore('entity', () => {
-  const activeEntityId = ref<string>('accounts');
-  
+  const activeEntityId = ref<string>('subscriptions');
+
   const activeEntity = computed(() => ENTITIES[activeEntityId.value]);
 
   const tableState = reactive<TableState>({
@@ -18,7 +18,7 @@ export const useEntityStore = defineStore('entity', () => {
     endDate: undefined,
     status: undefined,
     companyName: undefined,
-    searchField: ENTITIES.accounts.searchableFields[0]?.key
+    searchField: ENTITIES.subscriptions.searchableFields[0]?.key
   });
 
   function setActiveEntity(id: string) {
