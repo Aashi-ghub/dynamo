@@ -28,7 +28,7 @@
       <!-- Mobile entity selector -->
       <div class="lg:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         <button
-          v-for="entity in Object.values(ENTITIES)"
+          v-for="entity in visibleEntities"
           :key="entity.id"
           @click="entityStore.setActiveEntity(entity.id)"
           :class="[
@@ -46,7 +46,7 @@
       <aside class="hidden lg:block w-56 xl:w-64 flex-shrink-0">
         <nav class="space-y-1">
           <button
-            v-for="entity in Object.values(ENTITIES)"
+            v-for="entity in visibleEntities"
             :key="entity.id"
             @click="entityStore.setActiveEntity(entity.id)"
             :class="[
@@ -77,6 +77,8 @@ import { ENTITIES } from '../config/entities';
 
 const authStore = useAuthStore();
 const entityStore = useEntityStore();
+
+const visibleEntities = Object.values(ENTITIES).filter((e) => e.id === 'subscriptions');
 
 const logout = () => {
   authStore.logout();

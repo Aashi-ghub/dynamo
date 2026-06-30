@@ -40,6 +40,9 @@ export class EntityService {
     if (this.config.fieldMap.lastModifiedDate) record[this.config.fieldMap.lastModifiedDate] = now;
     if (this.config.fieldMap.createdById && user?.sub) record[this.config.fieldMap.createdById] = user.sub;
     if (this.config.fieldMap.lastModifiedById && user?.sub) record[this.config.fieldMap.lastModifiedById] = user.sub;
+    if (this.config.fieldMap.subscriptionId && !record[this.config.fieldMap.subscriptionId]) {
+      record[this.config.fieldMap.subscriptionId] = Date.now().toString();
+    }
     return this.toFrontend(await this.repository.create(record));
   }
 

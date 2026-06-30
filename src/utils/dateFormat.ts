@@ -7,6 +7,12 @@ export function formatDateDisplay(value: unknown): string {
 
   if (typeof value === 'string') {
     if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+    // MM/DD/YYYY format (common in NetSuite exports)
+    const mdyMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (mdyMatch) {
+      const [, m, d, y] = mdyMatch;
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
   }
 
   const date = new Date(

@@ -136,6 +136,7 @@
                         :id="field.key"
                         v-model="formData[field.key]"
                         :required="field.required"
+                        :step="field.type === 'number' ? 'any' : undefined"
                         class="field-input"
                       />
                     </template>
@@ -262,8 +263,8 @@ const visibleFieldKeys = computed(() =>
 );
 
 const fieldInputType = (field: EntityField) => {
-  if (field.type === 'number') return 'text';
-  if (field.type === 'email') return 'text';
+  if (field.type === 'number') return 'number';
+  if (field.type === 'email') return 'email';
   return field.type;
 };
 
@@ -300,16 +301,17 @@ const submitForm = () => {
   saveError.value = '';
 
   if (props.mode === 'create' || props.mode === 'edit') {
-    const missingRequired = formSections.value
+    const missingFields = formSections.value
       .flatMap((section) => section.fields)
       .filter((field) => field.required)
-      .find((field) => {
+      .filter((field) => {
         const value = formData.value[field.key];
         return value === '' || value === null || value === undefined;
       });
 
-    if (missingRequired) {
-      saveError.value = `${missingRequired.label} is required.`;
+    if (missingFields.length > 0) {
+      const fieldNames = missingFields.map((f) => f.label).join('\n• ');
+      window.alert(`Please fill in the following required fields:\n• ${fieldNames}`);
       return;
     }
   }

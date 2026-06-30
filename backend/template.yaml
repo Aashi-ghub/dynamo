@@ -105,6 +105,7 @@ Resources:
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
                 - dynamodb:Query
+                - dynamodb:Scan
               Resource:
                 - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AccountsTableName}
                 - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AccountsTableName}/index/*
@@ -120,13 +121,31 @@ Resources:
           Properties:
             ApiId: !Ref CrudApi
             Path: /{proxy+}
-            Method: ANY
+            Method: GET
+        ProxyPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudApi
+            Path: /{proxy+}
+            Method: POST
+        ProxyPut:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudApi
+            Path: /{proxy+}
+            Method: PUT
+        ProxyDelete:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudApi
+            Path: /{proxy+}
+            Method: DELETE
         Root:
           Type: HttpApi
           Properties:
             ApiId: !Ref CrudApi
             Path: /
-            Method: ANY
+            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

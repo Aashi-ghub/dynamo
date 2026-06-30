@@ -33,7 +33,7 @@ parameter_overrides = [
   "AllowedOrigins=http://localhost:5173",
   "AccountsTableName=Accounts",
   "ContactsTableName=Contacts",
-  "SubscriptionsTableName=Subscriptions",
+  "SubscriptionsTableName=TestSuiteAppSubscriptions",
   "CloudFilesTableName=CloudFiles",
   "DeleteMode=hard",
 ]
@@ -73,7 +73,7 @@ parameter_overrides = [
   "AllowedOrigins=https://di58r81ejzy3.cloudfront.net",
   "AccountsTableName=Accounts",
   "ContactsTableName=Contacts",
-  "SubscriptionsTableName=Subscriptions",
+  "SubscriptionsTableName=TestSuiteAppSubscriptions",
   "CloudFilesTableName=CloudFiles",
   "DeleteMode=soft",
 ]
@@ -102,9 +102,9 @@ parameter_overrides = [
   "CognitoUserPoolId=us-east-1_2IKHEP3rl",
   "CognitoClientId=237pf5etf060j80kuojv44jp6",
   "AllowedOrigins=https://di58r81ejzy3.cloudfront.net",
-  "AccountsTableName=Accounts",
-  "ContactsTableName=Contacts",
-  "SubscriptionsTableName=Subscriptions",
-  "CloudFilesTableName=CloudFiles",
+  "AccountsTableName=Account",
+  "ContactsTableName=Contact",
+  "SubscriptionsTableName=TestSuiteAppSubscriptions",
+  "CloudFilesTableName=TVA_CFB__Cloud_Files__c",
   "DeleteMode=soft",
 ]

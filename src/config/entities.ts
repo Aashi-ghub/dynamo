@@ -148,6 +148,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' }
     ],
     fields: [
+      { key: 'dateCreated', label: 'Date Created', type: 'date' },
       { key: 'customer', label: 'Customer', type: 'text', required: true },
       { key: 'product', label: 'Product', type: 'text', required: true },
       { key: 'status', label: 'Status', type: 'select', required: true, options: SUBSCRIPTION_STATUS_OPTIONS },

@@ -33,12 +33,48 @@ export class DynamoEntityRepository {
     if (query.search && searchField) {
       return this.listWithCaseInsensitiveSearch(query, searchField);
     }
+    return this.listWithFilter(query);
+  }
 
-    const input = this.buildListCommand(query).input;
-    const result = await this.client.send(new ScanCommand(input));
+  private async listWithFilter(query: ListQuery): Promise<PageResult<BusinessRecord>> {
+    const cursor = this.decodeSearchCursor(query.nextToken);
+    const items: BusinessRecord[] = [];
+    const pending = [...cursor.pendingMatches];
+    let exclusiveStartKey = cursor.exclusiveStartKey;
+
+    while (items.length < query.pageSize && pending.length > 0) {
+      items.push(pending.shift()!);
+    }
+
+    const batchSize = Math.min(Math.max(query.pageSize * 10, 100), 500);
+    const baseInput = this.buildListCommand({ ...query, nextToken: undefined }).input;
+
+    for (let round = 0; items.length < query.pageSize && round < 50; round++) {
+      const result = await this.client.send(new ScanCommand({
+        ...baseInput,
+        Limit: batchSize,
+        ExclusiveStartKey: exclusiveStartKey
+      }));
+
+      const batch = (result.Items as BusinessRecord[]) || [];
+      exclusiveStartKey = result.LastEvaluatedKey;
+
+      for (const item of batch) {
+        if (items.length < query.pageSize) {
+          items.push(item);
+        } else {
+          pending.push(item);
+        }
+      }
+
+      if (!exclusiveStartKey) break;
+      if (items.length >= query.pageSize) break;
+    }
+
+    const hasMore = pending.length > 0 || Boolean(exclusiveStartKey);
     return {
-      items: (result.Items as BusinessRecord[]) || [],
-      nextToken: encodeNextToken(result.LastEvaluatedKey)
+      items,
+      nextToken: hasMore ? this.encodeSearchCursor({ exclusiveStartKey, pendingMatches: pending }) : undefined
     };
   }
 
