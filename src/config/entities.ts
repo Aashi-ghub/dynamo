@@ -192,7 +192,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'product', label: 'Product' },
       { key: 'subscriptionId', label: 'Subscription ID' }
     ],
-    filters: { status: 'status', company: 'customer', date: 'dateCreated' },
+    filters: { status: 'status', date: 'dateCreated' },
     sortableFields: ['dateCreated']
   },
   cloudFiles: {
