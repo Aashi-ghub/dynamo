@@ -131,8 +131,22 @@
                       ></textarea>
 
                       <input
+                        v-if="field.type === 'date'"
+                        type="text"
+                        inputmode="numeric"
+                        placeholder="yyyy-mm-dd"
+                        maxlength="10"
+                        pattern="\d{4}-\d{2}-\d{2}"
+                        :id="field.key"
+                        :value="formData[field.key]"
+                        @input="onDateFieldInput($event, field.key)"
+                        :required="field.required"
+                        class="field-input"
+                      />
+
+                      <input
                         v-else
-                        :type="field.type === 'date' ? 'date' : fieldInputType(field)"
+                        :type="fieldInputType(field)"
                         :id="field.key"
                         v-model="formData[field.key]"
                         :required="field.required"
@@ -181,7 +195,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { EntityConfig } from '../types';
-import { formatDateDisplay, toDateInputValue } from '../utils/dateFormat';
+import { formatDateDisplay, maskDateInput, toDateInputValue } from '../utils/dateFormat';
 
 type EntityField = EntityConfig['fields'][number];
 
@@ -245,6 +259,11 @@ const toFormValue = (fieldKey: string, value: unknown) => {
     return toDateInputValue(value);
   }
   return value ?? '';
+};
+
+const onDateFieldInput = (event: Event, fieldKey: string) => {
+  const raw = (event.target as HTMLInputElement).value;
+  formData.value[fieldKey] = maskDateInput(raw);
 };
 
 const buildFormData = (record: Record<string, any> | null | undefined) => {

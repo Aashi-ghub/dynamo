@@ -144,6 +144,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'status', label: 'Status', type: 'status' },
       { key: 'billingFrequency', label: 'Billing Frequency' },
       { key: 'price', label: 'Price', type: 'number' },
+      { key: 'subscriptionStartDate', label: 'Subscription Start Date', type: 'date' },
       { key: 'nextBillDate', label: 'Next Bill Date', type: 'date' },
       { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' }
     ],
@@ -192,8 +193,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'product', label: 'Product' },
       { key: 'subscriptionId', label: 'Subscription ID' }
     ],
-    filters: { status: 'status', date: 'dateCreated' },
-    sortableFields: ['dateCreated']
+    filters: { status: 'status', date: 'subscriptionPeriod' },
+    sortableFields: ['subscriptionStartDate']
   },
   cloudFiles: {
     id: 'cloudFiles',

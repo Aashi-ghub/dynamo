@@ -30,26 +30,23 @@ export class DynamoEntityRepository {
 
   async list(query: ListQuery): Promise<PageResult<BusinessRecord>> {
     const searchField = this.resolveSearchField(query);
-    if (query.search && searchField) {
-      return this.listWithCaseInsensitiveSearch(query, searchField);
-    }
-    return this.listWithFilter(query);
+    const [page, total] = await Promise.all([
+      query.search && searchField ? this.listWithCaseInsensitiveSearch(query, searchField) : this.listWithFilter(query),
+      this.count(query, searchField)
+    ]);
+    return { ...page, total };
   }
 
-  private async listWithFilter(query: ListQuery): Promise<PageResult<BusinessRecord>> {
-    const cursor = this.decodeSearchCursor(query.nextToken);
+  private async listWithFilter(query: ListQuery): Promise<Omit<PageResult<BusinessRecord>, 'total'>> {
     const items: BusinessRecord[] = [];
-    const pending = [...cursor.pendingMatches];
-    let exclusiveStartKey = cursor.exclusiveStartKey;
+    let exclusiveStartKey = decodeNextToken(query.nextToken);
 
-    while (items.length < query.pageSize && pending.length > 0) {
-      items.push(pending.shift()!);
-    }
-
-    const batchSize = Math.min(Math.max(query.pageSize * 10, 100), 500);
+    // Collect pageSize+1 items — if we get the extra one, a next page exists
+    const wantCount = query.pageSize + 1;
+    const batchSize = Math.min(Math.max(wantCount * 10, 100), 500);
     const baseInput = this.buildListCommand({ ...query, nextToken: undefined }).input;
 
-    for (let round = 0; items.length < query.pageSize && round < 50; round++) {
+    for (let round = 0; items.length < wantCount && round < 50; round++) {
       const result = await this.client.send(new ScanCommand({
         ...baseInput,
         Limit: batchSize,
@@ -57,24 +54,25 @@ export class DynamoEntityRepository {
       }));
 
       const batch = (result.Items as BusinessRecord[]) || [];
-      exclusiveStartKey = result.LastEvaluatedKey;
+      const lastEvaluatedKey = result.LastEvaluatedKey;
 
       for (const item of batch) {
-        if (items.length < query.pageSize) {
+        if (items.length < wantCount) {
           items.push(item);
         } else {
-          pending.push(item);
+          break;
         }
       }
 
-      if (!exclusiveStartKey) break;
-      if (items.length >= query.pageSize) break;
+      if (!lastEvaluatedKey) break;
+      if (items.length >= wantCount) break;
+      exclusiveStartKey = lastEvaluatedKey;
     }
 
-    const hasMore = pending.length > 0 || Boolean(exclusiveStartKey);
+    const hasMore = items.length > query.pageSize;
     return {
-      items,
-      nextToken: hasMore ? this.encodeSearchCursor({ exclusiveStartKey, pendingMatches: pending }) : undefined
+      items: items.slice(0, query.pageSize),
+      nextToken: hasMore ? encodeNextToken(this.extractKey(items[query.pageSize - 1])) : undefined
     };
   }
 
@@ -170,7 +168,7 @@ export class DynamoEntityRepository {
     return key;
   }
 
-  private buildListCommand(query: ListQuery) {
+  private buildFilterExpression(query: ListQuery) {
     const names: Record<string, string> = {};
     const values: Record<string, unknown> = {};
     const filterParts: string[] = [];
@@ -184,6 +182,30 @@ export class DynamoEntityRepository {
     }
 
     for (const [field, range] of Object.entries(query.dateRanges)) {
+      if (this.config.periodFilter && field === this.config.periodFilter.field) {
+        const { startField, endField } = this.config.periodFilter;
+        const startRaw = this.toDynamoField(startField);
+        const endRaw = this.toDynamoField(endField);
+        const startToken = this.token(`period_start`);
+        const endToken = this.token(`period_end`);
+        // The range's "from" bound filters Subscription Start Date (>=),
+        // and the "to" bound filters Subscription End Date (<=), each
+        // independently against its own field. A blank/missing value on
+        // the field being checked means it can't satisfy the bound.
+        if (range.from) {
+          names[`#${startToken}`] = startRaw;
+          values[`:${startToken}_empty`] = '';
+          values[`:${startToken}_from`] = this.normalizeRangeValue(startField, range.from);
+          filterParts.push(`(attribute_exists(#${startToken}) AND #${startToken} <> :${startToken}_empty AND #${startToken} >= :${startToken}_from)`);
+        }
+        if (range.to) {
+          names[`#${endToken}`] = endRaw;
+          values[`:${endToken}_empty`] = '';
+          values[`:${endToken}_to`] = this.normalizeRangeValue(endField, range.to, true);
+          filterParts.push(`(attribute_exists(#${endToken}) AND #${endToken} <> :${endToken}_empty AND #${endToken} <= :${endToken}_to)`);
+        }
+        continue;
+      }
       const rawField = this.toDynamoField(field);
       const token = this.token(`range_${field}`);
       names[`#${token}`] = rawField;
@@ -205,6 +227,12 @@ export class DynamoEntityRepository {
       filterParts.push(`(attribute_not_exists(#${token}) OR #${token} <> :${token})`);
     }
 
+    return { names, values, filterParts };
+  }
+
+  private buildListCommand(query: ListQuery) {
+    const { names, values, filterParts } = this.buildFilterExpression(query);
+
     const projectedRawFields = this.config.listAttributes.map((field) => this.toDynamoField(field));
     projectedRawFields.forEach((field, index) => {
       names[`#proj_${index}`] = field;
@@ -222,6 +250,55 @@ export class DynamoEntityRepository {
     return { input };
   }
 
+  private async countWithFilter(query: ListQuery): Promise<number> {
+    const { names, values, filterParts } = this.buildFilterExpression(query);
+    const input = {
+      TableName: this.config.tableName,
+      FilterExpression: filterParts.length ? filterParts.join(' AND ') : undefined,
+      ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
+      ExpressionAttributeValues: Object.keys(values).length ? values : undefined,
+      Select: 'COUNT' as const
+    };
+
+    let total = 0;
+    let exclusiveStartKey: Record<string, unknown> | undefined;
+    do {
+      const result = await this.client.send(new ScanCommand({ ...input, ExclusiveStartKey: exclusiveStartKey }));
+      total += result.Count || 0;
+      exclusiveStartKey = result.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+    return total;
+  }
+
+  private async countWithCaseInsensitiveSearch(query: ListQuery, searchField: string): Promise<number> {
+    const needle = query.search!.toLowerCase();
+    const { names, values, filterParts } = this.buildFilterExpression({ ...query, search: undefined });
+    const input = {
+      TableName: this.config.tableName,
+      FilterExpression: filterParts.length ? filterParts.join(' AND ') : undefined,
+      ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
+      ExpressionAttributeValues: Object.keys(values).length ? values : undefined,
+      Limit: 500
+    };
+
+    let total = 0;
+    let exclusiveStartKey: Record<string, unknown> | undefined;
+    do {
+      const result = await this.client.send(new ScanCommand({ ...input, ExclusiveStartKey: exclusiveStartKey }));
+      const batch = (result.Items as BusinessRecord[]) || [];
+      for (const item of batch) {
+        if (this.matchesCaseInsensitiveSearch(item, searchField, needle)) total++;
+      }
+      exclusiveStartKey = result.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+    return total;
+  }
+
+  private async count(query: ListQuery, searchField?: string): Promise<number> {
+    if (query.search && searchField) return this.countWithCaseInsensitiveSearch(query, searchField);
+    return this.countWithFilter(query);
+  }
+
   private resolveSearchField(query: ListQuery) {
     if (!query.search) return undefined;
     const field = query.searchField || Object.keys(this.config.searchIndexes)[0];
@@ -236,74 +313,51 @@ export class DynamoEntityRepository {
     return String(value).toLowerCase().includes(needle);
   }
 
-  private decodeSearchCursor(token?: string) {
-    if (!token) return { pendingMatches: [] as BusinessRecord[] };
-    const decoded = decodeNextToken(token);
-    if (!decoded) return { pendingMatches: [] as BusinessRecord[] };
-    if ('pendingMatches' in decoded || 'exclusiveStartKey' in decoded) {
-      return {
-        exclusiveStartKey: decoded.exclusiveStartKey as Record<string, unknown> | undefined,
-        pendingMatches: (decoded.pendingMatches as BusinessRecord[]) || []
-      };
+  private extractKey(item: BusinessRecord): Record<string, unknown> {
+    const key: Record<string, unknown> = { [this.config.idField]: item[this.config.idField] };
+    if (this.config.sortKeyField) {
+      const rawField = this.toDynamoField(this.config.sortKeyField);
+      key[rawField] = item[rawField];
     }
-    return { exclusiveStartKey: decoded, pendingMatches: [] as BusinessRecord[] };
-  }
-
-  private encodeSearchCursor(cursor: {
-    exclusiveStartKey?: Record<string, unknown>;
-    pendingMatches: BusinessRecord[];
-  }) {
-    const payload: Record<string, unknown> = {};
-    if (cursor.exclusiveStartKey && Object.keys(cursor.exclusiveStartKey).length > 0) {
-      payload.exclusiveStartKey = cursor.exclusiveStartKey;
-    }
-    if (cursor.pendingMatches.length > 0) {
-      payload.pendingMatches = cursor.pendingMatches;
-    }
-    if (Object.keys(payload).length === 0) return undefined;
-    return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+    return key;
   }
 
   private async listWithCaseInsensitiveSearch(query: ListQuery, searchField: string) {
     const needle = query.search!.toLowerCase();
-    const cursor = this.decodeSearchCursor(query.nextToken);
     const items: BusinessRecord[] = [];
-    const pending = [...cursor.pendingMatches];
-    let exclusiveStartKey = cursor.exclusiveStartKey;
+    let exclusiveStartKey = decodeNextToken(query.nextToken);
 
-    while (items.length < query.pageSize && pending.length > 0) {
-      items.push(pending.shift()!);
-    }
-
-    const scanBatchSize = Math.min(Math.max(query.pageSize * 10, 50), 500);
+    const wantCount = query.pageSize + 1;
+    const scanBatchSize = Math.min(Math.max(wantCount * 10, 50), 500);
     const maxRounds = 50;
 
-    for (let round = 0; items.length < query.pageSize && round < maxRounds; round++) {
+    for (let round = 0; items.length < wantCount && round < maxRounds; round++) {
       const input = this.buildListCommand({ ...query, search: undefined, nextToken: undefined }).input;
       input.Limit = scanBatchSize;
       input.ExclusiveStartKey = exclusiveStartKey;
 
       const result = await this.client.send(new ScanCommand(input));
       const batch = (result.Items as BusinessRecord[]) || [];
-      exclusiveStartKey = result.LastEvaluatedKey;
+      const lastEvaluatedKey = result.LastEvaluatedKey;
 
       for (const item of batch) {
         if (!this.matchesCaseInsensitiveSearch(item, searchField, needle)) continue;
-        if (items.length < query.pageSize) {
+        if (items.length < wantCount) {
           items.push(item);
         } else {
-          pending.push(item);
+          break;
         }
       }
 
-      if (!exclusiveStartKey) break;
-      if (items.length >= query.pageSize) break;
+      if (!lastEvaluatedKey) break;
+      if (items.length >= wantCount) break;
+      exclusiveStartKey = lastEvaluatedKey;
     }
 
-    const hasMore = pending.length > 0 || Boolean(exclusiveStartKey);
+    const hasMore = items.length > query.pageSize;
     return {
-      items,
-      nextToken: hasMore ? this.encodeSearchCursor({ exclusiveStartKey, pendingMatches: pending }) : undefined
+      items: items.slice(0, query.pageSize),
+      nextToken: hasMore ? encodeNextToken(this.extractKey(items[query.pageSize - 1])) : undefined
     };
   }
 
@@ -327,6 +381,10 @@ export class DynamoEntityRepository {
     if (numericDateFields.has(rawField)) {
       const date = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`);
       if (!Number.isNaN(date.getTime())) return date.getTime();
+    }
+    // String date fields stored as 'YYYY-MM-DD HH:mm' — endDate must cover the full day
+    if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return `${value} 23:59`;
     }
     return value;
   }

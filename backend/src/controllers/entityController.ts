@@ -25,7 +25,7 @@ export const createEntityController = (entityName: EntityName) => {
     list: async (req: ApiRequest, res: Response) => {
       const query = validateListQuery(req.query as Record<string, unknown>, config);
       const result = await service.list(query);
-      listSuccess(res, result.items, query.pageSize, result.nextToken);
+      listSuccess(res, result.items, query.pageSize, result.nextToken, result.total);
     },
     get: async (req: ApiRequest, res: Response) => {
       const id = validateId(req.params.id);

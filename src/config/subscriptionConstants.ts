@@ -1,6 +1,7 @@
 export const SUBSCRIPTION_STATUS_OPTIONS = [
-  { label: 'New/Free Trial', value: 'New/Free Trial' },
+  { label: 'Active', value: 'Active' },
   { label: 'Billing', value: 'Billing' },
+  { label: 'New/Free Trial', value: 'New/Free Trial' },
   { label: 'Grace Period', value: 'Grace Period' },
   { label: 'On Hold', value: 'On Hold' },
   { label: 'Cancelled', value: 'Cancelled' },

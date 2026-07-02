@@ -6,11 +6,17 @@ export function formatDateDisplay(value: unknown): string {
   if (value === null || value === undefined || value === '') return '-';
 
   if (typeof value === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value; // show full stored value
     // MM/DD/YYYY format (common in NetSuite exports)
     const mdyMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (mdyMatch) {
       const [, m, d, y] = mdyMatch;
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    // DD-MM-YYYY format
+    const dmyMatch = value.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+    if (dmyMatch) {
+      const [, d, m, y] = dmyMatch;
       return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
   }
@@ -33,7 +39,15 @@ export function formatDateDisplay(value: unknown): string {
  */
 export function toDateInputValue(value: unknown): string | unknown {
   if (!value) return value ?? '';
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+    // DD-MM-YYYY → YYYY-MM-DD
+    const dmyMatch = value.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+    if (dmyMatch) {
+      const [, d, m, y] = dmyMatch;
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+  }
 
   const date = new Date(
     typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : String(value)
@@ -44,4 +58,16 @@ export function toDateInputValue(value: unknown): string | unknown {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * Masks free-typed digits into a yyyy-mm-dd string as the user types,
+ * avoiding any browser/locale-dependent date input formatting.
+ */
+export function maskDateInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  const year = digits.slice(0, 4);
+  const month = digits.slice(4, 6);
+  const day = digits.slice(6, 8);
+  return [year, month, day].filter(Boolean).join('-');
 }

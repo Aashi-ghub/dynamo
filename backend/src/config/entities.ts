@@ -21,6 +21,8 @@ export interface EntityConfig {
   searchIndexes: Record<string, { indexName: string; partitionKey: string }>;
   softDeleteField?: string;
   softDeleteValue?: string | boolean | number;
+  /** A virtual date-range filter matched against [startField, endField] as an interval overlap. */
+  periodFilter?: { field: string; startField: string; endField: string };
 }
 
 const invert = (fieldMap: Record<string, string>) =>
@@ -221,10 +223,11 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     editableFields: subscriptionEditable,
     readonlyFields: ['subscriptionId', 'dateCreated'],
     searchableFields: { customer: 'customer-index', product: 'product-index', subscriptionId: 'subscription-id-index' },
-    filterableFields: ['status', 'customer', 'dateCreated'],
-    sortableFields: { dateCreated: 'date-created-index' },
-    defaultSortField: 'dateCreated',
-    listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'nextBillDate', 'subscriptionEndDate'],
+    filterableFields: ['status', 'customer', 'subscriptionPeriod'],
+    periodFilter: { field: 'subscriptionPeriod', startField: 'subscriptionStartDate', endField: 'subscriptionEndDate' },
+    sortableFields: { subscriptionStartDate: 'subscription-start-date-index' },
+    defaultSortField: 'subscriptionStartDate',
+    listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'dateCreated', 'subscriptionStartDate', 'nextBillDate', 'subscriptionEndDate'],
     detailAttributes: Object.keys(subscriptionFieldMap),
     searchIndexes: {
       customer: { indexName: 'customer-index', partitionKey: 'Customer' },

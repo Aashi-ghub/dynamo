@@ -106,5 +106,5 @@ parameter_overrides = [
   "ContactsTableName=Contact",
   "SubscriptionsTableName=TestSuiteAppSubscriptions",
   "CloudFilesTableName=TVA_CFB__Cloud_Files__c",
-  "DeleteMode=soft",
+  "DeleteMode=hard",
 ]

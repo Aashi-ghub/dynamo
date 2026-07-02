@@ -33,4 +33,5 @@ export interface ListQuery {
 export interface PageResult<T> {
   items: T[];
   nextToken?: string;
+  total: number;
 }

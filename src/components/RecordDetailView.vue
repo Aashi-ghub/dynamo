@@ -184,7 +184,7 @@ const formatValue = (value: unknown, key?: string) => {
   if (value instanceof Date) return formatDateDisplay(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (isStructured(value)) return JSON.stringify(value, null, 2);
-  if (typeof value === 'number' && value > 100000000000) return formatDateDisplay(value);
+  if (typeof value === 'number' && value >= 946684800000 && value <= 4102444800000) return formatDateDisplay(value);
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return formatDateDisplay(value);
   return String(value);
 };

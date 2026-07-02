@@ -15,9 +15,9 @@
             </button>
           </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+        <div class="flex flex-wrap gap-4 items-end">
           <!-- Search -->
-          <div class="sm:col-span-2 lg:col-span-1 xl:col-span-1">
+          <div class="w-full sm:w-auto sm:flex-1 sm:min-w-[260px]">
             <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Search</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <select
@@ -33,12 +33,12 @@
                 @input="onSearch"
                 @keyup.enter="applySearchFilter"
                 :placeholder="`Search ${selectedSearchLabel}...`"
-                class="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+                class="block w-full min-w-0 pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
               />
             </div>
           </div>
           <!-- Status Filter -->
-          <div v-if="activeEntity.filters.status">
+          <div v-if="activeEntity.filters.status" class="w-full sm:w-auto sm:min-w-[160px]">
             <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Status</label>
             <select v-model="entityStore.tableState.status" @change="onFilterChange" class="block w-full pl-3 pr-10 py-2 text-sm border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md bg-white">
               <option value="">All Statuses</option>
@@ -46,22 +46,44 @@
             </select>
           </div>
           <!-- Company Name Filter -->
-          <div v-if="activeEntity.filters.company">
+          <div v-if="activeEntity.filters.company" class="w-full sm:w-auto sm:flex-1 sm:min-w-[200px]">
             <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Company</label>
             <input
               type="text"
               v-model="companyInput"
               @input="onCompanySearch"
               placeholder="Company Name..."
-              class="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+              class="block w-full min-w-0 pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
             />
           </div>
           <!-- Date Range Filter -->
-          <div v-if="activeEntity.filters.date" class="sm:col-span-2 lg:col-span-1 xl:col-span-1">
+          <div v-if="activeEntity.filters.date" class="w-full sm:w-auto sm:flex-1 sm:min-w-[280px]">
             <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Date Range</label>
             <div class="flex flex-col sm:flex-row gap-2">
-              <input type="date" v-model="entityStore.tableState.startDate" @change="onFilterChange" class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-              <input type="date" v-model="entityStore.tableState.endDate" @change="onFilterChange" class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              <VueDatePicker
+                :model-value="entityStore.tableState.startDate ?? null"
+                @update:model-value="(v: string | null) => onDateRangeChange(v, 'startDate')"
+                model-type="yyyy-MM-dd"
+                format="yyyy-MM-dd"
+                :enable-time-picker="false"
+                :text-input="true"
+                :clearable="true"
+                auto-apply
+                placeholder="yyyy-mm-dd"
+                class="w-full min-w-0 sm:min-w-[130px]"
+              />
+              <VueDatePicker
+                :model-value="entityStore.tableState.endDate ?? null"
+                @update:model-value="(v: string | null) => onDateRangeChange(v, 'endDate')"
+                model-type="yyyy-MM-dd"
+                format="yyyy-MM-dd"
+                :enable-time-picker="false"
+                :text-input="true"
+                :clearable="true"
+                auto-apply
+                placeholder="yyyy-mm-dd"
+                class="w-full min-w-0 sm:min-w-[130px]"
+              />
             </div>
           </div>
         </div>
@@ -106,7 +128,7 @@
                 No {{ activeEntity.plural.toLowerCase() }} found.
               </td>
             </tr>
-            <tr v-for="record in records" :key="record[activeEntity.partitionKeyField] || record.id || record.subscriptionId" class="hover:bg-primary-50/30 transition-colors">
+            <tr v-for="(record, index) in records" :key="record.subscriptionId || record.id || `${record[activeEntity.partitionKeyField]}-${record[activeEntity.sortKeyField ?? '']}` || index" class="hover:bg-primary-50/30 transition-colors">
               <td v-for="col in activeEntity.columns" :key="col.key" class="px-4 sm:px-6 py-4 text-sm text-gray-900 max-w-xs">
                 <span v-if="col.type === 'status'" :class="[
                   statusBadgeClass(record[col.key]),
@@ -133,8 +155,7 @@
     <!-- Pagination -->
     <div class="px-4 sm:px-6 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
       <div class="text-sm text-gray-700 text-center sm:text-left">
-        Showing <span class="font-semibold">{{ resultStart }}</span> to <span class="font-semibold">{{ resultEnd }}</span>
-        <span v-if="hasNextPage"> (more available)</span>
+        Showing <span class="font-semibold">{{ resultStart }}</span> to <span class="font-semibold">{{ resultEnd }}</span> of <span class="font-semibold">{{ totalCount }}</span>
       </div>
       <div class="flex items-center space-x-2">
         <button @click="prevPage" :disabled="currentPageIndex === 0" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
@@ -178,6 +199,8 @@ import { useEntityStore } from '../stores/entityStore';
 import { entityService } from '../services/entityService';
 import EntityModal from '../components/EntityModal.vue';
 import RecordDetailView from '../components/RecordDetailView.vue';
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 import { debounce } from '../utils/debounce';
 import { formatDateDisplay } from '../utils/dateFormat';
 
@@ -185,6 +208,7 @@ const entityStore = useEntityStore();
 const activeEntity = computed(() => entityStore.activeEntity);
 
 const records = ref<any[]>([]);
+const totalCount = ref(0);
 const loading = ref(false);
 const searchInput = ref('');
 const companyInput = ref('');
@@ -260,6 +284,7 @@ const fetchData = async (force = false) => {
     );
     if (seq !== fetchSeq) return;
     records.value = res.data;
+    totalCount.value = res.total;
     hasNextPage.value = res.hasMore;
     if (res.nextToken) {
       pageTokens.value[currentPageIndex.value + 1] = res.nextToken;
@@ -313,6 +338,16 @@ const onFilterChange = () => {
   entityStore.tableState.status = entityStore.tableState.status || undefined;
   resetPagination();
   fetchData();
+};
+
+const applyDateFilter = debounce(() => {
+  resetPagination();
+  fetchData();
+}, 300);
+
+const onDateRangeChange = (value: string | null, field: 'startDate' | 'endDate') => {
+  entityStore.tableState[field] = value || undefined;
+  applyDateFilter();
 };
 
 const statusOptions = computed(() => {
