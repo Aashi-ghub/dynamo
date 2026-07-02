@@ -77,7 +77,7 @@ Resources:
         DefaultAuthorizer: CognitoAuthorizer
       CorsConfiguration:
         AllowOrigins:
-          - "https://di58r81ejzy3.cloudfront.net"
+          - "https://subscriptions.tvarana.com"
           - "http://localhost:5173"
         AllowHeaders:
           - authorization
