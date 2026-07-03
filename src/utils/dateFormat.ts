@@ -59,15 +59,3 @@ export function toDateInputValue(value: unknown): string | unknown {
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
-
-/**
- * Masks free-typed digits into a yyyy-mm-dd string as the user types,
- * avoiding any browser/locale-dependent date input formatting.
- */
-export function maskDateInput(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  const year = digits.slice(0, 4);
-  const month = digits.slice(4, 6);
-  const day = digits.slice(6, 8);
-  return [year, month, day].filter(Boolean).join('-');
-}

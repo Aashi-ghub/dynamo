@@ -69,7 +69,7 @@
                   >
                     <label
                       v-if="field.type !== 'boolean'"
-                      :for="field.key"
+                      :for="field.type === 'date' ? `dp-input-${field.key}` : field.key"
                       class="mb-1.5 block text-sm font-medium leading-snug text-gray-700"
                     >
                       {{ field.label }}
@@ -130,18 +130,21 @@
                         class="field-input resize-y"
                       ></textarea>
 
-                      <input
-                        v-if="field.type === 'date'"
-                        type="text"
-                        inputmode="numeric"
-                        placeholder="yyyy-mm-dd"
-                        maxlength="10"
-                        pattern="\d{4}-\d{2}-\d{2}"
-                        :id="field.key"
-                        :value="formData[field.key]"
-                        @input="onDateFieldInput($event, field.key)"
+                      <VueDatePicker
+                        v-else-if="field.type === 'date'"
+                        v-readonly-date
+                        :uid="field.key"
+                        :model-value="formData[field.key] || null"
+                        @update:model-value="(v: string | null) => (formData[field.key] = v ?? '')"
+                        model-type="yyyy-MM-dd"
+                        format="yyyy-MM-dd"
+                        :enable-time-picker="false"
+                        :text-input="false"
+                        :clearable="true"
                         :required="field.required"
-                        class="field-input"
+                        auto-apply
+                        placeholder="yyyy-mm-dd"
+                        class="w-full"
                       />
 
                       <input
@@ -195,7 +198,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { EntityConfig } from '../types';
-import { formatDateDisplay, maskDateInput, toDateInputValue } from '../utils/dateFormat';
+import { formatDateDisplay, toDateInputValue } from '../utils/dateFormat';
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
+import { vReadonlyDate } from '../utils/readonlyDateInput';
 
 type EntityField = EntityConfig['fields'][number];
 
@@ -259,11 +265,6 @@ const toFormValue = (fieldKey: string, value: unknown) => {
     return toDateInputValue(value);
   }
   return value ?? '';
-};
-
-const onDateFieldInput = (event: Event, fieldKey: string) => {
-  const raw = (event.target as HTMLInputElement).value;
-  formData.value[fieldKey] = maskDateInput(raw);
 };
 
 const buildFormData = (record: Record<string, any> | null | undefined) => {

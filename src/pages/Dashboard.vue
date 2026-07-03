@@ -61,24 +61,26 @@
             <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Date Range</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <VueDatePicker
+                v-readonly-date
                 :model-value="entityStore.tableState.startDate ?? null"
                 @update:model-value="(v: string | null) => onDateRangeChange(v, 'startDate')"
                 model-type="yyyy-MM-dd"
                 format="yyyy-MM-dd"
                 :enable-time-picker="false"
-                :text-input="true"
+                :text-input="false"
                 :clearable="true"
                 auto-apply
                 placeholder="yyyy-mm-dd"
                 class="w-full min-w-0 sm:min-w-[130px]"
               />
               <VueDatePicker
+                v-readonly-date
                 :model-value="entityStore.tableState.endDate ?? null"
                 @update:model-value="(v: string | null) => onDateRangeChange(v, 'endDate')"
                 model-type="yyyy-MM-dd"
                 format="yyyy-MM-dd"
                 :enable-time-picker="false"
-                :text-input="true"
+                :text-input="false"
                 :clearable="true"
                 auto-apply
                 placeholder="yyyy-mm-dd"
@@ -203,6 +205,7 @@ import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { debounce } from '../utils/debounce';
 import { formatDateDisplay } from '../utils/dateFormat';
+import { vReadonlyDate } from '../utils/readonlyDateInput';
 
 const entityStore = useEntityStore();
 const activeEntity = computed(() => entityStore.activeEntity);
