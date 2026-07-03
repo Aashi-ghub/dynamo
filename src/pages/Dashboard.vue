@@ -160,11 +160,11 @@
         Showing <span class="font-semibold">{{ resultStart }}</span> to <span class="font-semibold">{{ resultEnd }}</span> of <span class="font-semibold">{{ totalCount }}</span>
       </div>
       <div class="flex items-center space-x-2">
-        <button @click="prevPage" :disabled="currentPageIndex === 0" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <button @click="prevPage" :disabled="currentPageIndex === 0 || pendingDateFilter || loading" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
           Previous
         </button>
         <span class="text-sm text-gray-500 font-medium px-2">Page {{ currentPageIndex + 1 }}</span>
-        <button @click="nextPage" :disabled="!hasNextPage" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <button @click="nextPage" :disabled="!hasNextPage || pendingDateFilter || loading" class="px-4 py-1.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
           Next
         </button>
       </div>
@@ -219,6 +219,7 @@ const companyInput = ref('');
 const pageTokens = ref<(string | undefined)[]>([undefined]);
 const currentPageIndex = ref(0);
 const hasNextPage = ref(false);
+const pendingDateFilter = ref(false);
 let fetchController: AbortController | null = null;
 let lastFetchKey = '';
 let fetchSeq = 0;
@@ -346,10 +347,12 @@ const onFilterChange = () => {
 const applyDateFilter = debounce(() => {
   resetPagination();
   fetchData();
+  pendingDateFilter.value = false;
 }, 300);
 
 const onDateRangeChange = (value: string | null, field: 'startDate' | 'endDate') => {
   entityStore.tableState[field] = value || undefined;
+  pendingDateFilter.value = true;
   applyDateFilter();
 };
 
@@ -383,13 +386,13 @@ const sortBy = (key: string) => {
 };
 
 const prevPage = () => {
-  if (currentPageIndex.value === 0) return;
+  if (currentPageIndex.value === 0 || pendingDateFilter.value || loading.value) return;
   currentPageIndex.value--;
   fetchData();
 };
 
 const nextPage = () => {
-  if (!hasNextPage.value) return;
+  if (!hasNextPage.value || pendingDateFilter.value || loading.value) return;
   currentPageIndex.value++;
   fetchData();
 };
