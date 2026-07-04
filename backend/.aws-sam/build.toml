@@ -5,7 +5,7 @@ codeuri = "D:\\GitHub\\dynamoUI\\backend"
 runtime = "nodejs22.x"
 architecture = "arm64"
 handler = "dist/src/lambda.handler"
-manifest_hash = "631d256e7b1f7427b75973394fae7469"
+manifest_hash = "5ec68851a341a66f43f4b12e90b35769"
 packagetype = "Zip"
 functions = ["CrudApiFunction"]
 
@@ -17,6 +17,9 @@ Minify = true
 Target = "es2022"
 Sourcemap = false
 EntryPoints = ["src/lambda.ts"]
+
+
+
 
 
 
