@@ -6,10 +6,8 @@ Parameters:
   AppEnv:
     Type: String
     AllowedValues:
-      - DEV
-      - STAGING
       - PROD
-    Default: DEV
+    Default: PROD
   CognitoUserPoolId:
     Type: String
     NoEcho: false
