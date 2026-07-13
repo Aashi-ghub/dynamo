@@ -137,6 +137,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
     titleField: 'subscriptionId',
     partitionKeyField: 'clientNetSuiteAccountId',
     sortKeyField: 'productCode',
+    editableKeyFields: ['clientNetSuiteAccountId'],
     columns: [
       { key: 'subscriptionId', label: 'Subscription ID' },
       { key: 'customer', label: 'Customer' },
@@ -153,7 +154,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'customer', label: 'Customer', type: 'text', required: true },
       { key: 'product', label: 'Product', type: 'text', required: true },
       { key: 'status', label: 'Status', type: 'select', required: true, options: SUBSCRIPTION_STATUS_OPTIONS },
-      { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID', type: 'text' },
+      { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID', type: 'text', required: true },
       { key: 'productCode', label: 'Product Code', type: 'select', required: true, options: PRODUCT_CODE_OPTIONS },
       { key: 'billingFrequency', label: 'Billing Frequency', type: 'text' },
       { key: 'clientNotificationsSuiteletUrl', label: 'Client Notifications Suitelet URL', type: 'text' },
@@ -167,6 +168,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'freeTrialSignupPhone', label: 'Free Trial Signup Phone', type: 'text' },
       { key: 'inactive', label: 'Inactive', type: 'boolean' },
       { key: 'nextBillDate', label: 'Next Bill Date', type: 'date' },
+      { key: 'nextDueDate', label: 'Next Due Date', type: 'date' },
       { key: 'numberOfUsers', label: 'Number Of Users', type: 'number' },
       { key: 'price', label: 'Price', type: 'number' },
       { key: 'priceUsd', label: 'Price USD', type: 'number' },
@@ -181,8 +183,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     detailGroups: [
       { label: 'General Information', fields: ['subscriptionId', 'customer', 'clientNetSuiteAccountId', 'status', 'deactivateSubscription', 'subscriptionType', 'contractType'] },
       { label: 'Product Information', fields: ['product', 'productCode', 'version', 'numberOfUsers'] },
-      { label: 'Billing Information', fields: ['billingFrequency', 'price', 'priceUsd', 'nextBillDate', 'transaction'] },
-      { label: 'Subscription Dates', fields: ['dateCreated', 'subscriptionStartDate', 'subscriptionEndDate', 'endOfTrialPeriod'] },
+      { label: 'Billing Information', fields: ['billingFrequency', 'price', 'priceUsd', 'transaction'] },
+      { label: 'Subscription Dates', fields: ['dateCreated', 'subscriptionStartDate', 'subscriptionEndDate', 'nextDueDate', 'nextBillDate', 'endOfTrialPeriod'] },
       { label: 'Trial Signup Information', fields: ['freeTrialSignupCompany', 'freeTrialSignupEmailAddress', 'freeTrialSignupName', 'freeTrialSignupPhone'] },
       { label: 'Contact / Notification Information', fields: ['clientPointOfContact', 'clientNotificationsSuiteletUrl'] },
       { label: 'Notes', fields: ['remarks'] }

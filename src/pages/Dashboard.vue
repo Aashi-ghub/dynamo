@@ -9,6 +9,10 @@
             <button @click="() => fetchData(true)" class="p-2 text-gray-400 hover:text-primary-600 transition-colors" title="Refresh">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </button>
+            <button @click="exportToExcel" :disabled="exporting || records.length === 0"
+              class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-semibold rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ exporting ? 'Exporting...' : 'Download Excel' }}
+            </button>
             <button @click="openCreateModal"
               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
               Create {{ activeEntity.name }}
@@ -197,6 +201,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
+import ExcelJS from 'exceljs';
 import { useEntityStore } from '../stores/entityStore';
 import { entityService } from '../services/entityService';
 import EntityModal from '../components/EntityModal.vue';
@@ -213,6 +218,7 @@ const activeEntity = computed(() => entityStore.activeEntity);
 const records = ref<any[]>([]);
 const totalCount = ref(0);
 const loading = ref(false);
+const exporting = ref(false);
 const searchInput = ref('');
 const companyInput = ref('');
 
@@ -511,6 +517,57 @@ const formatValue = (value: unknown, type?: string) => {
   if (type === 'date') return formatDateDisplay(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value);
+};
+
+const formatExportValue = (value: unknown, type?: string) => {
+  if (value === null || value === undefined || value === '') return '';
+  if (type === 'date') return formatDateDisplay(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return value as string | number;
+};
+
+const exportToExcel = async () => {
+  if (exporting.value) return;
+  exporting.value = true;
+  try {
+    const exportState = { ...entityStore.tableState, limit: 100 };
+    const allRecords: any[] = [];
+    let nextToken: string | undefined;
+    let pages = 0;
+    do {
+      const res = await entityService.fetchRecords(activeEntity.value, exportState, nextToken);
+      allRecords.push(...res.data);
+      nextToken = res.nextToken;
+      pages++;
+    } while (nextToken && pages < 200);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(activeEntity.value.plural);
+    sheet.columns = activeEntity.value.columns.map((col) => ({ header: col.label, key: col.key }));
+    sheet.getRow(1).font = { bold: true };
+
+    for (const record of allRecords) {
+      const row: Record<string, unknown> = {};
+      for (const col of activeEntity.value.columns) {
+        row[col.key] = formatExportValue(record[col.key], col.type);
+      }
+      sheet.addRow(row);
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeEntity.value.plural.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to export records', error);
+    window.alert('Failed to export records to Excel.');
+  } finally {
+    exporting.value = false;
+  }
 };
 
 const statusBadgeClass = (status: unknown) => {

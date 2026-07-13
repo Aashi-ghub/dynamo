@@ -23,6 +23,8 @@ export interface EntityConfig {
   softDeleteValue?: string | boolean | number;
   /** A virtual date-range filter matched against [startField, endField] as an interval overlap. */
   periodFilter?: { field: string; startField: string; endField: string };
+  /** Partition/sort key fields that remain updatable despite being part of the record's key (implemented as a delete+recreate move). */
+  editableKeyFields?: string[];
 }
 
 const invert = (fieldMap: Record<string, string>) =>
@@ -122,6 +124,7 @@ const subscriptionFieldMap = {
   freeTrialSignupPhone: 'Free trial sign-up Phone',
   inactive: 'Inactive',
   nextBillDate: 'Next Bill Date',
+  nextDueDate: 'Next Due Date',
   numberOfUsers: 'Number of Users',
   price: 'Price',
   priceUsd: 'Price(USD)',
@@ -160,7 +163,7 @@ const subscriptionEditable = [
   'clientNetSuiteAccountId', 'productCode', 'billingFrequency', 'clientNotificationsSuiteletUrl',
   'clientPointOfContact', 'contractType', 'customer', 'deactivateSubscription', 'endOfTrialPeriod',
   'freeTrialSignupCompany', 'freeTrialSignupEmailAddress', 'freeTrialSignupName', 'freeTrialSignupPhone',
-  'inactive', 'nextBillDate', 'numberOfUsers', 'price', 'priceUsd', 'product', 'remarks', 'status',
+  'inactive', 'nextBillDate', 'nextDueDate', 'numberOfUsers', 'price', 'priceUsd', 'product', 'remarks', 'status',
   'subscriptionEndDate', 'subscriptionInactive', 'subscriptionStartDate', 'subscriptionType', 'transaction', 'version'
 ];
 
@@ -219,12 +222,13 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     idField: 'Client NetSuite Account ID',
     sortKeyField: 'productCode',
     fieldMap: subscriptionFieldMap,
-    requiredFields: ['customer', 'product', 'status', 'productCode'],
+    requiredFields: ['customer', 'product', 'status', 'productCode', 'clientNetSuiteAccountId'],
     editableFields: subscriptionEditable,
+    editableKeyFields: ['clientNetSuiteAccountId'],
     readonlyFields: ['subscriptionId', 'dateCreated'],
     searchableFields: { customer: 'customer-index', product: 'product-index', subscriptionId: 'subscription-id-index' },
     filterableFields: ['status', 'customer', 'subscriptionPeriod'],
-    periodFilter: { field: 'subscriptionPeriod', startField: 'subscriptionStartDate', endField: 'subscriptionEndDate' },
+    periodFilter: { field: 'subscriptionPeriod', startField: 'subscriptionEndDate', endField: 'subscriptionEndDate' },
     sortableFields: { subscriptionStartDate: 'subscription-start-date-index' },
     defaultSortField: 'subscriptionStartDate',
     listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'dateCreated', 'subscriptionStartDate', 'nextBillDate', 'subscriptionEndDate'],

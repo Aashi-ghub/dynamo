@@ -3,6 +3,7 @@ import {
   GetCommand,
   PutCommand,
   ScanCommand,
+  TransactWriteCommand,
   UpdateCommand,
   type DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb';
@@ -137,6 +138,41 @@ export class DynamoEntityRepository {
     return (result.Attributes as BusinessRecord | undefined) || null;
   }
 
+  /** Moves a record to a new partition key value via an atomic delete+recreate transaction (DynamoDB can't update key attributes in place). */
+  async moveItem(oldId: string, record: BusinessRecord, sortKey?: string | boolean | number) {
+    const names = { '#pk': this.config.idField };
+
+    await this.client.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: this.config.tableName,
+              Item: record,
+              ConditionExpression: 'attribute_not_exists(#pk)',
+              ExpressionAttributeNames: names
+            }
+          },
+          {
+            Delete: {
+              TableName: this.config.tableName,
+              Key: this.buildKey(oldId, sortKey),
+              ConditionExpression: 'attribute_exists(#pk)',
+              ExpressionAttributeNames: names
+            }
+          }
+        ]
+      })
+    ).catch((error) => {
+      if (error.name === 'TransactionCanceledException') {
+        throw conflict('A record with this ID already exists, or the original record was not found');
+      }
+      throw error;
+    });
+
+    return record;
+  }
+
   async hardDelete(id: string, sortKey?: string | boolean | number) {
     const names: Record<string, string> = { '#pk': this.config.idField };
     const keyExists = this.config.sortKeyField
@@ -188,8 +224,8 @@ export class DynamoEntityRepository {
         const endRaw = this.toDynamoField(endField);
         const startToken = this.token(`period_start`);
         const endToken = this.token(`period_end`);
-        // The range's "from" bound filters Subscription Start Date (>=),
-        // and the "to" bound filters Subscription End Date (<=), each
+        // The range's "from" bound filters periodFilter.startField (>=),
+        // and the "to" bound filters periodFilter.endField (<=), each
         // independently against its own field. A blank/missing value on
         // the field being checked means it can't satisfy the bound.
         if (range.from) {

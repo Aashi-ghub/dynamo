@@ -12,6 +12,8 @@ export interface EntityConfig {
   titleField: string;
   partitionKeyField: string;
   sortKeyField?: string;
+  /** Partition/sort key fields that remain editable in edit mode despite being part of the record's key. */
+  editableKeyFields?: string[];
   columns: Array<{
     key: string;
     label: string;

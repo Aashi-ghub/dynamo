@@ -47,7 +47,13 @@ export class EntityService {
   }
 
   async update(id: string, patch: Record<string, unknown>, user?: AuthUser, sortKey?: string | boolean | number) {
-    const rawPatch = this.stripKeyFields(this.toDynamo(patch));
+    const rawInput = this.toDynamo(patch);
+    const newId = rawInput[this.config.idField];
+    if (typeof newId === 'string' && newId.trim() && newId !== id) {
+      return this.moveKey(id, newId, rawInput, user, sortKey);
+    }
+
+    const rawPatch = this.stripKeyFields(rawInput);
     if (Object.keys(rawPatch).length === 0) {
       throw badRequest('Validation failed', [{ field: 'body', message: 'No updatable fields were provided' }]);
     }
@@ -56,6 +62,28 @@ export class EntityService {
     const updated = await this.repository.update(id, rawPatch, sortKey);
     if (!updated) throw notFound();
     return this.toFrontend(updated);
+  }
+
+  private async moveKey(
+    oldId: string,
+    newId: string,
+    rawInput: Record<string, unknown>,
+    user?: AuthUser,
+    sortKey?: string | boolean | number
+  ) {
+    const existing = await this.repository.getById(oldId, sortKey);
+    if (!existing) throw notFound();
+
+    const record: BusinessRecord = {
+      ...existing,
+      ...this.stripKeyFields(rawInput),
+      [this.config.idField]: newId
+    };
+    if (this.config.fieldMap.lastModifiedDate) record[this.config.fieldMap.lastModifiedDate] = Date.now();
+    if (this.config.fieldMap.lastModifiedById && user?.sub) record[this.config.fieldMap.lastModifiedById] = user.sub;
+
+    const moved = await this.repository.moveItem(oldId, record, sortKey);
+    return this.toFrontend(moved);
   }
 
   async delete(id: string, user?: AuthUser, sortKey?: string | boolean | number) {

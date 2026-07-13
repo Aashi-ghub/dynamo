@@ -217,6 +217,7 @@ const editableKeys = computed(() => props.entity.fields.map((field) => field.key
 
 const isReadonlyField = (fieldKey: string) => {
   if (props.entity.readonlyFields?.includes(fieldKey)) return true;
+  if (props.entity.editableKeyFields?.includes(fieldKey)) return false;
   if (props.mode === 'edit') {
     if (fieldKey === props.entity.partitionKeyField) return true;
     if (props.entity.sortKeyField && fieldKey === props.entity.sortKeyField) return true;

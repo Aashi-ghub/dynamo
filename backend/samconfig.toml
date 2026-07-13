@@ -31,7 +31,7 @@ parameter_overrides = [
   "AllowedOrigins=https://subscriptions.tvarana.com",
   "AccountsTableName=Account",
   "ContactsTableName=Contact",
-  "SubscriptionsTableName=TestSuiteAppSubscriptions",
+  "SubscriptionsTableName=SuiteAppSubscriptions",
   "CloudFilesTableName=TVA_CFB__Cloud_Files__c",
   "DeleteMode=hard",
 ]

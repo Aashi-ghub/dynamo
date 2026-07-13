@@ -70,8 +70,9 @@ export const validateUpdateBody = (body: unknown, config: EntityConfig) => {
   const keyFields = new Set([
     ...Object.entries(config.fieldMap)
       .filter(([, dynamoField]) => dynamoField === config.idField)
-      .map(([frontendField]) => frontendField),
-    ...(config.sortKeyField ? [config.sortKeyField] : [])
+      .map(([frontendField]) => frontendField)
+      .filter((frontendField) => !config.editableKeyFields?.includes(frontendField)),
+    ...(config.sortKeyField && !config.editableKeyFields?.includes(config.sortKeyField) ? [config.sortKeyField] : [])
   ]);
 
   for (const field of Object.keys(record)) {
