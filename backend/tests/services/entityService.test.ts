@@ -43,6 +43,12 @@ describe('EntityService', () => {
 
   it('strips composite key fields from subscription updates', async () => {
     const repo = repository();
+    repo.getById.mockResolvedValue({
+      'Client NetSuite Account ID': '590499',
+      'Product Code': 'IC',
+      Customer: 'Old Customer',
+      Status: 'Pending'
+    });
     const service = new EntityService(repo as any, entityConfigs.subscriptions);
 
     await service.update('590499', {
@@ -66,6 +72,62 @@ describe('EntityService', () => {
         Customer: 'Updated Customer',
         Status: 'Active'
       }),
+      'IC'
+    );
+  });
+
+  it('appends a subscription history entry when the start date changes', async () => {
+    const repo = repository();
+    repo.getById.mockResolvedValue({
+      'Client NetSuite Account ID': '590499',
+      'Product Code': 'IC',
+      'Subscription Start Date': '2025-01-01',
+      'Subscription End Date': '2025-12-31',
+      Price: 1000,
+      'Next Bill Date': '2025-12-31',
+      Transaction: 'TXN-1'
+    });
+    const service = new EntityService(repo as any, entityConfigs.subscriptions);
+
+    await service.update('590499', {
+      subscriptionStartDate: '2026-01-01',
+      subscriptionEndDate: '2026-12-31'
+    }, undefined, 'IC');
+
+    expect(repo.update).toHaveBeenCalledWith(
+      '590499',
+      expect.objectContaining({
+        'Subscription History': [
+          {
+            subscriptionStartDate: '2025-01-01',
+            subscriptionEndDate: '2025-12-31',
+            price: 1000,
+            nextBillDate: '2025-12-31',
+            transaction: 'TXN-1'
+          }
+        ]
+      }),
+      'IC'
+    );
+  });
+
+  it('does not append a history entry when the start date is unchanged', async () => {
+    const repo = repository();
+    repo.getById.mockResolvedValue({
+      'Client NetSuite Account ID': '590499',
+      'Product Code': 'IC',
+      'Subscription Start Date': '2025-01-01'
+    });
+    const service = new EntityService(repo as any, entityConfigs.subscriptions);
+
+    await service.update('590499', {
+      subscriptionStartDate: '2025-01-01',
+      customer: 'Renamed'
+    }, undefined, 'IC');
+
+    expect(repo.update).toHaveBeenCalledWith(
+      '590499',
+      expect.not.objectContaining({ 'Subscription History': expect.anything() }),
       'IC'
     );
   });

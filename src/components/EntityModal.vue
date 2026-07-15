@@ -132,14 +132,13 @@
 
                       <VueDatePicker
                         v-else-if="field.type === 'date'"
-                        v-readonly-date
                         :uid="field.key"
                         :model-value="formData[field.key] || null"
                         @update:model-value="(v: string | null) => (formData[field.key] = v ?? '')"
                         model-type="yyyy-MM-dd"
                         format="yyyy-MM-dd"
                         :enable-time-picker="false"
-                        :text-input="false"
+                        :text-input="true"
                         :clearable="true"
                         :required="field.required"
                         auto-apply
@@ -158,6 +157,42 @@
                       />
                     </template>
                   </div>
+                </div>
+              </section>
+
+              <section v-if="historyConfig && props.mode !== 'create'">
+                <h4 class="mb-4 border-b border-gray-200 pb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                  {{ historyConfig.label }}
+                </h4>
+                <div class="overflow-x-auto rounded-md border border-gray-200">
+                  <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th
+                          v-for="col in historyConfig.columns"
+                          :key="col.key"
+                          class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                          {{ col.label }}
+                        </th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                      <tr v-for="(entry, index) in historyEntries" :key="index" class="text-gray-500">
+                        <td v-for="col in historyConfig.columns" :key="col.key" class="whitespace-nowrap px-3 py-2">
+                          {{ formatHistoryValue(entry[col.key], col.type) }}
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-400">locked</td>
+                      </tr>
+                      <tr class="bg-primary-50/40 font-medium text-gray-900">
+                        <td v-for="col in historyConfig.columns" :key="col.key" class="whitespace-nowrap px-3 py-2">
+                          {{ formatHistoryValue(formData[col.key], col.type) }}
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2 text-xs font-semibold text-primary-600">current</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </section>
             </div>
@@ -201,7 +236,6 @@ import type { EntityConfig } from '../types';
 import { formatDateDisplay, toDateInputValue } from '../utils/dateFormat';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
-import { vReadonlyDate } from '../utils/readonlyDateInput';
 
 type EntityField = EntityConfig['fields'][number];
 
@@ -302,6 +336,20 @@ const modeTitle = computed(() => {
   if (props.mode === 'delete') return `Delete ${props.entity.name}`;
   return '';
 });
+
+const historyConfig = computed(() => props.entity.historyConfig);
+
+const historyEntries = computed(() => {
+  if (!historyConfig.value) return [];
+  const raw = props.record?.[historyConfig.value.field];
+  return Array.isArray(raw) ? raw : [];
+});
+
+const formatHistoryValue = (value: unknown, type?: string) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (type === 'date') return formatDateDisplay(value);
+  return String(value);
+};
 
 const formatDisplayValue = (field: EntityField, value: unknown) => {
   if (value === null || value === undefined || value === '') return '-';

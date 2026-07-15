@@ -48,12 +48,16 @@ export class EntityService {
 
   async update(id: string, patch: Record<string, unknown>, user?: AuthUser, sortKey?: string | boolean | number) {
     const rawInput = this.toDynamo(patch);
-    const newId = rawInput[this.config.idField];
+    const existing = await this.repository.getById(id, sortKey);
+    if (!existing) throw notFound();
+
+    const mergedInput = { ...rawInput, ...this.buildHistoryPatch(existing, rawInput) };
+    const newId = mergedInput[this.config.idField];
     if (typeof newId === 'string' && newId.trim() && newId !== id) {
-      return this.moveKey(id, newId, rawInput, user, sortKey);
+      return this.moveKey(id, newId, existing, mergedInput, user, sortKey);
     }
 
-    const rawPatch = this.stripKeyFields(rawInput);
+    const rawPatch = this.stripKeyFields(mergedInput);
     if (Object.keys(rawPatch).length === 0) {
       throw badRequest('Validation failed', [{ field: 'body', message: 'No updatable fields were provided' }]);
     }
@@ -67,13 +71,11 @@ export class EntityService {
   private async moveKey(
     oldId: string,
     newId: string,
+    existing: BusinessRecord,
     rawInput: Record<string, unknown>,
     user?: AuthUser,
     sortKey?: string | boolean | number
   ) {
-    const existing = await this.repository.getById(oldId, sortKey);
-    if (!existing) throw notFound();
-
     const record: BusinessRecord = {
       ...existing,
       ...this.stripKeyFields(rawInput),
@@ -84,6 +86,28 @@ export class EntityService {
 
     const moved = await this.repository.moveItem(oldId, record, sortKey);
     return this.toFrontend(moved);
+  }
+
+  /** Snapshots `snapshotFields` from the pre-update record into `historyField` when `triggerField` is changing. */
+  private buildHistoryPatch(existing: BusinessRecord, rawInput: Record<string, unknown>) {
+    const tracking = this.config.historyTracking;
+    if (!tracking) return {};
+    const triggerRaw = this.config.fieldMap[tracking.triggerField];
+    const historyRaw = this.config.fieldMap[tracking.historyField];
+    if (!triggerRaw || !historyRaw) return {};
+
+    const newValue = rawInput[triggerRaw];
+    const oldValue = existing[triggerRaw];
+    if (newValue === undefined || !oldValue || newValue === oldValue) return {};
+
+    const entry: Record<string, unknown> = {};
+    for (const field of tracking.snapshotFields) {
+      const raw = this.config.fieldMap[field];
+      if (raw) entry[field] = existing[raw];
+    }
+
+    const existingHistory = Array.isArray(existing[historyRaw]) ? (existing[historyRaw] as unknown[]) : [];
+    return { [historyRaw]: [...existingHistory, entry] };
   }
 
   async delete(id: string, user?: AuthUser, sortKey?: string | boolean | number) {

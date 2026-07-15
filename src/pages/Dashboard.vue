@@ -62,29 +62,27 @@
           </div>
           <!-- Date Range Filter -->
           <div v-if="activeEntity.filters.date" class="w-full sm:w-auto sm:flex-1 sm:min-w-[280px]">
-            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Date Range</label>
+            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Subscription End Date Range</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <VueDatePicker
-                v-readonly-date
                 :model-value="entityStore.tableState.startDate ?? null"
                 @update:model-value="(v: string | null) => onDateRangeChange(v, 'startDate')"
                 model-type="yyyy-MM-dd"
                 format="yyyy-MM-dd"
                 :enable-time-picker="false"
-                :text-input="false"
+                :text-input="true"
                 :clearable="true"
                 auto-apply
                 placeholder="yyyy-mm-dd"
                 class="w-full min-w-0 sm:min-w-[130px]"
               />
               <VueDatePicker
-                v-readonly-date
                 :model-value="entityStore.tableState.endDate ?? null"
                 @update:model-value="(v: string | null) => onDateRangeChange(v, 'endDate')"
                 model-type="yyyy-MM-dd"
                 format="yyyy-MM-dd"
                 :enable-time-picker="false"
-                :text-input="false"
+                :text-input="true"
                 :clearable="true"
                 auto-apply
                 placeholder="yyyy-mm-dd"
@@ -210,7 +208,6 @@ import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { debounce } from '../utils/debounce';
 import { formatDateDisplay } from '../utils/dateFormat';
-import { vReadonlyDate } from '../utils/readonlyDateInput';
 
 const entityStore = useEntityStore();
 const activeEntity = computed(() => entityStore.activeEntity);
@@ -541,14 +538,15 @@ const exportToExcel = async () => {
       pages++;
     } while (nextToken && pages < 200);
 
+    const exportColumns = activeEntity.value.exportColumns ?? activeEntity.value.columns;
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(activeEntity.value.plural);
-    sheet.columns = activeEntity.value.columns.map((col) => ({ header: col.label, key: col.key }));
+    sheet.columns = exportColumns.map((col) => ({ header: col.label, key: col.key }));
     sheet.getRow(1).font = { bold: true };
 
     for (const record of allRecords) {
       const row: Record<string, unknown> = {};
-      for (const col of activeEntity.value.columns) {
+      for (const col of exportColumns) {
         row[col.key] = formatExportValue(record[col.key], col.type);
       }
       sheet.addRow(row);

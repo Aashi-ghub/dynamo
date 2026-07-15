@@ -149,6 +149,14 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'nextBillDate', label: 'Next Bill Date', type: 'date' },
       { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' }
     ],
+    exportColumns: [
+      { key: 'customer', label: 'Customer' },
+      { key: 'product', label: 'Product' },
+      { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' },
+      { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID' },
+      { key: 'price', label: 'Price', type: 'number' },
+      { key: 'transaction', label: 'Transaction' }
+    ],
     fields: [
       { key: 'dateCreated', label: 'Date Created', type: 'date' },
       { key: 'customer', label: 'Customer', type: 'text', required: true },
@@ -196,7 +204,18 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'subscriptionId', label: 'Subscription ID' }
     ],
     filters: { status: 'status', date: 'subscriptionPeriod' },
-    sortableFields: ['subscriptionStartDate']
+    sortableFields: ['subscriptionStartDate'],
+    historyConfig: {
+      field: 'subscriptionHistory',
+      label: 'Subscription History',
+      columns: [
+        { key: 'subscriptionStartDate', label: 'Start', type: 'date' },
+        { key: 'subscriptionEndDate', label: 'End', type: 'date' },
+        { key: 'price', label: 'Price', type: 'number' },
+        { key: 'nextBillDate', label: 'Next Bill', type: 'date' },
+        { key: 'transaction', label: 'Transaction' }
+      ]
+    }
   },
   cloudFiles: {
     id: 'cloudFiles',

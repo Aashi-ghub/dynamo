@@ -25,6 +25,8 @@ export interface EntityConfig {
   periodFilter?: { field: string; startField: string; endField: string };
   /** Partition/sort key fields that remain updatable despite being part of the record's key (implemented as a delete+recreate move). */
   editableKeyFields?: string[];
+  /** Appends a snapshot of `snapshotFields` (from the pre-update record) into the `historyField` list whenever `triggerField` changes on save. */
+  historyTracking?: { historyField: string; triggerField: string; snapshotFields: string[] };
 }
 
 const invert = (fieldMap: Record<string, string>) =>
@@ -137,7 +139,8 @@ const subscriptionFieldMap = {
   subscriptionType: 'Subscription Type',
   transaction: 'Transaction',
   version: 'Version',
-  subscriptionId: '\uFEFFSubscription ID'
+  subscriptionId: '\uFEFFSubscription ID',
+  subscriptionHistory: 'Subscription History'
 };
 
 const cloudFileFieldMap = {
@@ -225,13 +228,18 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     requiredFields: ['customer', 'product', 'status', 'productCode', 'clientNetSuiteAccountId'],
     editableFields: subscriptionEditable,
     editableKeyFields: ['clientNetSuiteAccountId'],
-    readonlyFields: ['subscriptionId', 'dateCreated'],
+    readonlyFields: ['subscriptionId', 'dateCreated', 'subscriptionHistory'],
     searchableFields: { customer: 'customer-index', product: 'product-index', subscriptionId: 'subscription-id-index' },
     filterableFields: ['status', 'customer', 'subscriptionPeriod'],
     periodFilter: { field: 'subscriptionPeriod', startField: 'subscriptionEndDate', endField: 'subscriptionEndDate' },
+    historyTracking: {
+      historyField: 'subscriptionHistory',
+      triggerField: 'subscriptionStartDate',
+      snapshotFields: ['subscriptionStartDate', 'subscriptionEndDate', 'price', 'nextBillDate', 'transaction']
+    },
     sortableFields: { subscriptionStartDate: 'subscription-start-date-index' },
     defaultSortField: 'subscriptionStartDate',
-    listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'dateCreated', 'subscriptionStartDate', 'nextBillDate', 'subscriptionEndDate'],
+    listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'dateCreated', 'subscriptionStartDate', 'nextBillDate', 'subscriptionEndDate', 'transaction'],
     detailAttributes: Object.keys(subscriptionFieldMap),
     searchIndexes: {
       customer: { indexName: 'customer-index', partitionKey: 'Customer' },

@@ -19,6 +19,12 @@ export interface EntityConfig {
     label: string;
     type?: 'text' | 'date' | 'number' | 'status';
   }>;
+  /** Columns included in the "Download Excel" export. Defaults to `columns` when omitted. */
+  exportColumns?: Array<{
+    key: string;
+    label: string;
+    type?: 'text' | 'date' | 'number' | 'status';
+  }>;
   fields: Array<{
     key: string;
     label: string;
@@ -41,6 +47,16 @@ export interface EntityConfig {
     date?: string;
   };
   sortableFields?: string[];
+  /** Renders a read-only history table (past entries + a live "current" row) below the edit/create form, sourced from a List attribute on the record. */
+  historyConfig?: {
+    field: string;
+    label: string;
+    columns: Array<{
+      key: string;
+      label: string;
+      type?: 'text' | 'date' | 'number';
+    }>;
+  };
 }
 
 export interface TableState {
