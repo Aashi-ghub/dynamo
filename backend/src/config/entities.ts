@@ -126,7 +126,6 @@ const subscriptionFieldMap = {
   freeTrialSignupPhone: 'Free trial sign-up Phone',
   inactive: 'Inactive',
   nextBillDate: 'Next Bill Date',
-  nextDueDate: 'Next Due Date',
   numberOfUsers: 'Number of Users',
   price: 'Price',
   priceUsd: 'Price(USD)',
@@ -166,7 +165,7 @@ const subscriptionEditable = [
   'clientNetSuiteAccountId', 'productCode', 'billingFrequency', 'clientNotificationsSuiteletUrl',
   'clientPointOfContact', 'contractType', 'customer', 'deactivateSubscription', 'endOfTrialPeriod',
   'freeTrialSignupCompany', 'freeTrialSignupEmailAddress', 'freeTrialSignupName', 'freeTrialSignupPhone',
-  'inactive', 'nextBillDate', 'nextDueDate', 'numberOfUsers', 'price', 'priceUsd', 'product', 'remarks', 'status',
+  'inactive', 'nextBillDate', 'numberOfUsers', 'price', 'priceUsd', 'product', 'remarks', 'status',
   'subscriptionEndDate', 'subscriptionInactive', 'subscriptionStartDate', 'subscriptionType', 'transaction', 'version'
 ];
 

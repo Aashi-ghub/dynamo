@@ -176,7 +176,6 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'freeTrialSignupPhone', label: 'Free Trial Signup Phone', type: 'text' },
       { key: 'inactive', label: 'Inactive', type: 'boolean' },
       { key: 'nextBillDate', label: 'Next Bill Date', type: 'date' },
-      { key: 'nextDueDate', label: 'Next Due Date', type: 'date' },
       { key: 'numberOfUsers', label: 'Number Of Users', type: 'number' },
       { key: 'price', label: 'Price', type: 'number' },
       { key: 'priceUsd', label: 'Price USD', type: 'number' },
@@ -192,7 +191,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { label: 'General Information', fields: ['subscriptionId', 'customer', 'clientNetSuiteAccountId', 'status', 'deactivateSubscription', 'subscriptionType', 'contractType'] },
       { label: 'Product Information', fields: ['product', 'productCode', 'version', 'numberOfUsers'] },
       { label: 'Billing Information', fields: ['billingFrequency', 'price', 'priceUsd', 'transaction'] },
-      { label: 'Subscription Dates', fields: ['dateCreated', 'subscriptionStartDate', 'subscriptionEndDate', 'nextDueDate', 'nextBillDate', 'endOfTrialPeriod'] },
+      { label: 'Subscription Dates', fields: ['dateCreated', 'subscriptionStartDate', 'subscriptionEndDate', 'nextBillDate', 'endOfTrialPeriod'] },
       { label: 'Trial Signup Information', fields: ['freeTrialSignupCompany', 'freeTrialSignupEmailAddress', 'freeTrialSignupName', 'freeTrialSignupPhone'] },
       { label: 'Contact / Notification Information', fields: ['clientPointOfContact', 'clientNotificationsSuiteletUrl'] },
       { label: 'Notes', fields: ['remarks'] }
