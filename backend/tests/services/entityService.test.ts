@@ -76,7 +76,7 @@ describe('EntityService', () => {
     );
   });
 
-  it('appends a subscription history entry when the start date changes', async () => {
+  it('appends a subscription history entry when the new start date is after the old end date (renewal)', async () => {
     const repo = repository();
     repo.getById.mockResolvedValue({
       'Client NetSuite Account ID': '590499',
@@ -85,7 +85,8 @@ describe('EntityService', () => {
       'Subscription End Date': '2025-12-31',
       Price: 1000,
       'Next Bill Date': '2025-12-31',
-      Transaction: 'TXN-1'
+      Transaction: 'TXN-1',
+      Remarks: 'Renewed annually'
     });
     const service = new EntityService(repo as any, entityConfigs.subscriptions);
 
@@ -103,7 +104,8 @@ describe('EntityService', () => {
             subscriptionEndDate: '2025-12-31',
             price: 1000,
             nextBillDate: '2025-12-31',
-            transaction: 'TXN-1'
+            transaction: 'TXN-1',
+            remarks: 'Renewed annually'
           }
         ]
       }),
@@ -116,13 +118,70 @@ describe('EntityService', () => {
     repo.getById.mockResolvedValue({
       'Client NetSuite Account ID': '590499',
       'Product Code': 'IC',
-      'Subscription Start Date': '2025-01-01'
+      'Subscription Start Date': '2025-01-01',
+      'Subscription End Date': '2025-12-31'
     });
     const service = new EntityService(repo as any, entityConfigs.subscriptions);
 
     await service.update('590499', {
       subscriptionStartDate: '2025-01-01',
       customer: 'Renamed'
+    }, undefined, 'IC');
+
+    expect(repo.update).toHaveBeenCalledWith(
+      '590499',
+      expect.not.objectContaining({ 'Subscription History': expect.anything() }),
+      'IC'
+    );
+  });
+
+  it('does not append a history entry when the new start date is not after the old end date (correction, not a renewal)', async () => {
+    const repo = repository();
+    repo.getById.mockResolvedValue({
+      'Client NetSuite Account ID': '590499',
+      'Product Code': 'IC',
+      'Subscription Start Date': '2025-01-01',
+      'Subscription End Date': '2025-12-31'
+    });
+    const service = new EntityService(repo as any, entityConfigs.subscriptions);
+
+    await service.update('590499', {
+      subscriptionStartDate: '2025-02-01',
+      subscriptionEndDate: '2025-12-31'
+    }, undefined, 'IC');
+
+    expect(repo.update).toHaveBeenCalledWith(
+      '590499',
+      expect.not.objectContaining({ 'Subscription History': expect.anything() }),
+      'IC'
+    );
+  });
+
+  it('does not append a duplicate history entry on a later save that only changes the end date', async () => {
+    const repo = repository();
+    // State right after a renewal save that only updated the start date — the end date
+    // (2028-09-09) hasn't caught up yet, so it's still before the already-moved start date.
+    repo.getById.mockResolvedValue({
+      'Client NetSuite Account ID': '590499',
+      'Product Code': 'IC',
+      'Subscription Start Date': '2028-09-10',
+      'Subscription End Date': '2028-09-09',
+      'Subscription History': [
+        {
+          subscriptionStartDate: '2028-08-08',
+          subscriptionEndDate: '2028-09-09',
+          price: 1000,
+          nextBillDate: '2028-09-09',
+          transaction: 'TXN-1',
+          remarks: ''
+        }
+      ]
+    });
+    const service = new EntityService(repo as any, entityConfigs.subscriptions);
+
+    await service.update('590499', {
+      subscriptionStartDate: '2028-09-10',
+      subscriptionEndDate: '2028-10-09'
     }, undefined, 'IC');
 
     expect(repo.update).toHaveBeenCalledWith(

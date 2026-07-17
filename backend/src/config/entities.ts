@@ -25,8 +25,8 @@ export interface EntityConfig {
   periodFilter?: { field: string; startField: string; endField: string };
   /** Partition/sort key fields that remain updatable despite being part of the record's key (implemented as a delete+recreate move). */
   editableKeyFields?: string[];
-  /** Appends a snapshot of `snapshotFields` (from the pre-update record) into the `historyField` list whenever `triggerField` changes on save. */
-  historyTracking?: { historyField: string; triggerField: string; snapshotFields: string[] };
+  /** Appends a snapshot of `snapshotFields` (from the pre-update record) into the `historyField` list whenever the incoming `triggerField` value is strictly after the existing `compareField` value (a renewal, not just any edit). */
+  historyTracking?: { historyField: string; triggerField: string; compareField: string; snapshotFields: string[] };
 }
 
 const invert = (fieldMap: Record<string, string>) =>
@@ -234,7 +234,8 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     historyTracking: {
       historyField: 'subscriptionHistory',
       triggerField: 'subscriptionStartDate',
-      snapshotFields: ['subscriptionStartDate', 'subscriptionEndDate', 'price', 'nextBillDate', 'transaction']
+      compareField: 'subscriptionEndDate',
+      snapshotFields: ['subscriptionStartDate', 'subscriptionEndDate', 'price', 'nextBillDate', 'transaction', 'remarks']
     },
     sortableFields: { subscriptionStartDate: 'subscription-start-date-index' },
     defaultSortField: 'subscriptionStartDate',

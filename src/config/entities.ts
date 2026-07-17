@@ -212,7 +212,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
         { key: 'subscriptionEndDate', label: 'End', type: 'date' },
         { key: 'price', label: 'Price', type: 'number' },
         { key: 'nextBillDate', label: 'Next Bill', type: 'date' },
-        { key: 'transaction', label: 'Transaction' }
+        { key: 'transaction', label: 'Transaction' },
+        { key: 'remarks', label: 'Remarks' }
       ]
     }
   },

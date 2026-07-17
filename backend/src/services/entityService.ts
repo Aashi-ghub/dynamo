@@ -88,17 +88,28 @@ export class EntityService {
     return this.toFrontend(moved);
   }
 
-  /** Snapshots `snapshotFields` from the pre-update record into `historyField` when `triggerField` is changing. */
+  /**
+   * Snapshots `snapshotFields` from the pre-update record into `historyField` when the incoming
+   * `triggerField` value both (a) actually differs from its current stored value, and (b) is
+   * strictly after the existing `compareField` value — i.e. this save is itself the renewal, not
+   * an unrelated later edit (e.g. filling in the end date) that happens to still satisfy the
+   * after-old-end-date check left over from a prior save.
+   */
   private buildHistoryPatch(existing: BusinessRecord, rawInput: Record<string, unknown>) {
     const tracking = this.config.historyTracking;
     if (!tracking) return {};
     const triggerRaw = this.config.fieldMap[tracking.triggerField];
+    const compareRaw = this.config.fieldMap[tracking.compareField];
     const historyRaw = this.config.fieldMap[tracking.historyField];
-    if (!triggerRaw || !historyRaw) return {};
+    if (!triggerRaw || !compareRaw || !historyRaw) return {};
 
     const newValue = rawInput[triggerRaw];
     const oldValue = existing[triggerRaw];
-    if (newValue === undefined || !oldValue || newValue === oldValue) return {};
+    const oldCompareValue = existing[compareRaw];
+    if (typeof newValue !== 'string' || !newValue) return {};
+    if (typeof oldCompareValue !== 'string' || !oldCompareValue) return {};
+    if (newValue === oldValue) return {};
+    if (!(newValue > oldCompareValue)) return {};
 
     const entry: Record<string, unknown> = {};
     for (const field of tracking.snapshotFields) {

@@ -89,6 +89,42 @@
               </div>
             </dl>
           </section>
+
+          <section v-if="historyConfig" class="mt-6 overflow-hidden rounded-lg bg-white shadow-sm">
+            <div class="border-b border-gray-200 px-4 sm:px-6 py-4 bg-gray-50">
+              <h3 class="text-base font-semibold text-gray-900">{{ historyConfig.label }}</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th
+                      v-for="col in historyConfig.columns"
+                      :key="col.key"
+                      class="px-4 sm:px-6 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                    >
+                      {{ col.label }}
+                    </th>
+                    <th class="px-4 sm:px-6 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr v-for="(entry, index) in historyEntries" :key="index" class="text-gray-500">
+                    <td v-for="col in historyConfig.columns" :key="col.key" class="whitespace-nowrap px-4 sm:px-6 py-2">
+                      {{ formatHistoryValue(entry[col.key], col.type) }}
+                    </td>
+                    <td class="whitespace-nowrap px-4 sm:px-6 py-2 text-xs text-gray-400">locked</td>
+                  </tr>
+                  <tr class="bg-primary-50/40 font-medium text-gray-900">
+                    <td v-for="col in historyConfig.columns" :key="col.key" class="whitespace-nowrap px-4 sm:px-6 py-2">
+                      {{ formatHistoryValue(record?.[col.key], col.type) }}
+                    </td>
+                    <td class="whitespace-nowrap px-4 sm:px-6 py-2 text-xs font-semibold text-primary-600">current</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </main>
     </div>
@@ -168,6 +204,20 @@ const humanize = (key: string) =>
     .trim();
 
 const isStructured = (value: unknown) => value !== null && typeof value === 'object';
+
+const historyConfig = computed(() => props.entity.historyConfig);
+
+const historyEntries = computed(() => {
+  if (!historyConfig.value) return [];
+  const raw = props.record?.[historyConfig.value.field];
+  return Array.isArray(raw) ? raw : [];
+});
+
+const formatHistoryValue = (value: unknown, type?: string) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (type === 'date') return formatDateDisplay(value);
+  return String(value);
+};
 
 const emitEdit = () => {
   if (props.record) emit('edit', props.record);
