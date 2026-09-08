@@ -19,6 +19,11 @@ const router = createRouter({
           path: '',
           name: 'Dashboard',
           component: () => import('../pages/Dashboard.vue')
+        },
+        {
+          path: 'records/:entityId/:recordId',
+          name: 'RecordDetail',
+          component: () => import('../pages/RecordDetailPage.vue')
         }
       ]
     },

@@ -1,5 +1,5 @@
 import type { EntityConfig } from '../types';
-import { PRODUCT_CODE_OPTIONS, SUBSCRIPTION_STATUS_OPTIONS } from './subscriptionConstants';
+import { PRODUCT_CODE_OPTIONS, PRODUCT_NAME_OPTIONS, SUBSCRIPTION_STATUS_OPTIONS } from './subscriptionConstants';
 
 export const ENTITIES: Record<string, EntityConfig> = {
   accounts: {
@@ -151,6 +151,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
     ],
     exportColumns: [
       { key: 'customer', label: 'Customer' },
+      { key: 'salesRep', label: 'Sales Rep' },
       { key: 'product', label: 'Product' },
       { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' },
       { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID' },
@@ -160,7 +161,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
     fields: [
       { key: 'dateCreated', label: 'Date Created', type: 'date' },
       { key: 'customer', label: 'Customer', type: 'text', required: true },
-      { key: 'product', label: 'Product', type: 'text', required: true },
+      { key: 'product', label: 'Product', type: 'select', required: true, options: PRODUCT_NAME_OPTIONS },
       { key: 'status', label: 'Status', type: 'select', required: true, options: SUBSCRIPTION_STATUS_OPTIONS },
       { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID', type: 'text', required: true },
       { key: 'productCode', label: 'Product Code', type: 'select', required: true, options: PRODUCT_CODE_OPTIONS },
@@ -180,6 +181,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'price', label: 'Price', type: 'number' },
       { key: 'priceUsd', label: 'Price USD', type: 'number' },
       { key: 'remarks', label: 'Remarks', type: 'textarea' },
+      { key: 'salesRep', label: 'Sales Rep', type: 'text' },
       { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' },
       { key: 'subscriptionInactive', label: 'Subscription Inactive', type: 'boolean' },
       { key: 'subscriptionStartDate', label: 'Subscription Start Date', type: 'date' },
@@ -188,7 +190,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'version', label: 'Version', type: 'text' }
     ],
     detailGroups: [
-      { label: 'General Information', fields: ['subscriptionId', 'customer', 'clientNetSuiteAccountId', 'status', 'deactivateSubscription', 'subscriptionType', 'contractType'] },
+      { label: 'General Information', fields: ['subscriptionId', 'customer', 'salesRep', 'clientNetSuiteAccountId', 'status', 'deactivateSubscription', 'subscriptionType', 'contractType'] },
       { label: 'Product Information', fields: ['product', 'productCode', 'version', 'numberOfUsers'] },
       { label: 'Billing Information', fields: ['billingFrequency', 'price', 'priceUsd', 'transaction'] },
       { label: 'Subscription Dates', fields: ['dateCreated', 'subscriptionStartDate', 'subscriptionEndDate', 'nextBillDate', 'endOfTrialPeriod'] },
@@ -200,7 +202,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     searchableFields: [
       { key: 'customer', label: 'Customer' },
       { key: 'product', label: 'Product' },
-      { key: 'subscriptionId', label: 'Subscription ID' }
+      { key: 'subscriptionId', label: 'Subscription ID' },
+      { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID' }
     ],
     filters: { status: 'status', date: 'subscriptionPeriod' },
     sortableFields: ['subscriptionStartDate'],

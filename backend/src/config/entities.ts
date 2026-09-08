@@ -131,6 +131,7 @@ const subscriptionFieldMap = {
   priceUsd: 'Price(USD)',
   product: 'Product',
   remarks: 'Remarks',
+  salesRep: 'Sales Rep',
   status: 'Status',
   subscriptionEndDate: 'Subscription End Date',
   subscriptionInactive: 'Subscription Inactive',
@@ -165,7 +166,7 @@ const subscriptionEditable = [
   'clientNetSuiteAccountId', 'productCode', 'billingFrequency', 'clientNotificationsSuiteletUrl',
   'clientPointOfContact', 'contractType', 'customer', 'deactivateSubscription', 'endOfTrialPeriod',
   'freeTrialSignupCompany', 'freeTrialSignupEmailAddress', 'freeTrialSignupName', 'freeTrialSignupPhone',
-  'inactive', 'nextBillDate', 'numberOfUsers', 'price', 'priceUsd', 'product', 'remarks', 'status',
+  'inactive', 'nextBillDate', 'numberOfUsers', 'price', 'priceUsd', 'product', 'remarks', 'salesRep', 'status',
   'subscriptionEndDate', 'subscriptionInactive', 'subscriptionStartDate', 'subscriptionType', 'transaction', 'version'
 ];
 
@@ -228,7 +229,12 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     editableFields: subscriptionEditable,
     editableKeyFields: ['clientNetSuiteAccountId'],
     readonlyFields: ['subscriptionId', 'dateCreated', 'subscriptionHistory'],
-    searchableFields: { customer: 'customer-index', product: 'product-index', subscriptionId: 'subscription-id-index' },
+    searchableFields: {
+      customer: 'customer-index',
+      product: 'product-index',
+      subscriptionId: 'subscription-id-index',
+      clientNetSuiteAccountId: 'client-netsuite-account-id-index'
+    },
     filterableFields: ['status', 'customer', 'subscriptionPeriod'],
     periodFilter: { field: 'subscriptionPeriod', startField: 'subscriptionEndDate', endField: 'subscriptionEndDate' },
     historyTracking: {
@@ -244,7 +250,8 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     searchIndexes: {
       customer: { indexName: 'customer-index', partitionKey: 'Customer' },
       product: { indexName: 'product-index', partitionKey: 'Product' },
-      subscriptionId: { indexName: 'subscription-id-index', partitionKey: '\uFEFFSubscription ID' }
+      subscriptionId: { indexName: 'subscription-id-index', partitionKey: '\uFEFFSubscription ID' },
+      clientNetSuiteAccountId: { indexName: 'client-netsuite-account-id-index', partitionKey: 'Client NetSuite Account ID' }
     },
     softDeleteField: 'appDeleted',
     softDeleteValue: true

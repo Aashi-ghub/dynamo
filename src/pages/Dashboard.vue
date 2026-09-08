@@ -148,7 +148,12 @@
                 </span>
               </td>
               <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-white">
-                <button @click="openViewModal(record)" class="inline-flex items-center px-3 py-1 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-800 font-semibold transition-colors">View</button>
+                <a
+                  :href="viewHref(record)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-primary-600 hover:bg-primary-50 hover:text-primary-800 font-semibold transition-colors"
+                >View</a>
               </td>
             </tr>
           </tbody>
@@ -182,34 +187,24 @@
       @save="handleSave"
       @delete="handleDelete"
     />
-
-    <RecordDetailView
-      v-if="detailState.isOpen"
-      :entity="activeEntity"
-      :record="detailState.record"
-      :loading="detailState.loading"
-      :error="detailState.error"
-      @close="closeDetailView"
-      @edit="openEditFromDetail"
-      @delete="openDeleteFromDetail"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import ExcelJS from 'exceljs';
 import { useEntityStore } from '../stores/entityStore';
 import { entityService } from '../services/entityService';
 import EntityModal from '../components/EntityModal.vue';
-import RecordDetailView from '../components/RecordDetailView.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { debounce } from '../utils/debounce';
 import { formatDateDisplay } from '../utils/dateFormat';
 
 const entityStore = useEntityStore();
+const router = useRouter();
 const activeEntity = computed(() => entityStore.activeEntity);
 
 const records = ref<any[]>([]);
@@ -230,13 +225,6 @@ let fetchSeq = 0;
 const modalState = ref({
   isOpen: false,
   mode: 'create' as 'create' | 'edit' | 'delete',
-  record: null as any
-});
-
-const detailState = ref({
-  isOpen: false,
-  loading: false,
-  error: '',
   record: null as any
 });
 
@@ -405,52 +393,21 @@ const openCreateModal = () => {
   modalState.value = { isOpen: true, mode: 'create', record: {} };
 };
 
-const openViewModal = async (record: any) => {
-  detailState.value = {
-    isOpen: true,
-    loading: true,
-    error: '',
-    record: null
+const viewHref = (record: any) => {
+  const entity = activeEntity.value;
+  const params: Record<string, string> = {
+    entityId: entity.id,
+    recordId: String(record[entity.partitionKeyField])
   };
-
-  try {
-    const detailRecord = await entityService.fetchRecordById(activeEntity.value, record);
-    detailState.value.record = detailRecord;
-  } catch (error) {
-    console.error("Failed to fetch record details", error);
-    detailState.value.error = `Failed to load ${activeEntity.value.name.toLowerCase()} details.`;
-  } finally {
-    detailState.value.loading = false;
+  const query: Record<string, string> = {};
+  if (entity.sortKeyField && record[entity.sortKeyField] !== undefined && record[entity.sortKeyField] !== null) {
+    query.sortKey = String(record[entity.sortKeyField]);
   }
-};
-
-const openEditModal = (record: any) => {
-  modalState.value = { isOpen: true, mode: 'edit', record: { ...record } };
-};
-
-const openDeleteModal = (record: any) => {
-  modalState.value = { isOpen: true, mode: 'delete', record: { ...record } };
+  return router.resolve({ name: 'RecordDetail', params, query }).href;
 };
 
 const closeModal = () => {
   modalState.value.isOpen = false;
-};
-
-const closeDetailView = () => {
-  detailState.value = {
-    isOpen: false,
-    loading: false,
-    error: '',
-    record: null
-  };
-};
-
-const openEditFromDetail = (record: any) => {
-  openEditModal(record);
-};
-
-const openDeleteFromDetail = (record: any) => {
-  openDeleteModal(record);
 };
 
 const handleSave = async (data: any) => {
@@ -459,10 +416,7 @@ const handleSave = async (data: any) => {
     if (modalState.value.mode === 'create') {
       await entityService.createRecord(activeEntity.value.apiPath, data);
     } else {
-      const updatedRecord = await entityService.updateRecord(activeEntity.value, modalState.value.record, data);
-      if (detailState.value.isOpen) {
-        detailState.value.record = updatedRecord;
-      }
+      await entityService.updateRecord(activeEntity.value, modalState.value.record, data);
     }
     closeModal();
     lastFetchKey = '';
@@ -485,7 +439,6 @@ const handleDelete = async () => {
   try {
     await entityService.deleteRecord(activeEntity.value, modalState.value.record);
     closeModal();
-    closeDetailView();
     lastFetchKey = '';
     fetchData(true);
   } catch (error) {
@@ -497,7 +450,6 @@ const handleDelete = async () => {
 
 watch(() => activeEntity.value.id, () => {
   syncLocalInputs();
-  closeDetailView();
   closeModal();
   resetPagination();
   lastFetchKey = '';

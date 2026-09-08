@@ -10,6 +10,7 @@ import {
 import type { EntityConfig } from '../config/entities.js';
 import type { BusinessRecord } from '../models/businessRecord.js';
 import type { ListQuery, PageResult } from '../types/api.js';
+import { stripBom } from '../utils/bom.js';
 import { conflict } from '../utils/errors.js';
 import { decodeNextToken, encodeNextToken } from '../utils/pagination.js';
 
@@ -269,7 +270,19 @@ export class DynamoEntityRepository {
   private buildListCommand(query: ListQuery) {
     const { names, values, filterParts } = this.buildFilterExpression(query);
 
-    const projectedRawFields = this.config.listAttributes.map((field) => this.toDynamoField(field));
+    // Project both the canonical raw field name and its BOM-stripped alias, since some
+    // legacy/externally-written records store attribute names without the leading
+    // byte-order-mark this app's fieldMap expects — DynamoDB's ProjectionExpression only
+    // returns exact attribute-name matches, so without the alias those fields would be
+    // silently dropped before ever reaching the raw-to-frontend mapping.
+    const projectedFieldSet = new Set<string>();
+    for (const field of this.config.listAttributes) {
+      const rawField = this.toDynamoField(field);
+      projectedFieldSet.add(rawField);
+      const stripped = stripBom(rawField);
+      if (stripped !== rawField) projectedFieldSet.add(stripped);
+    }
+    const projectedRawFields = [...projectedFieldSet];
     projectedRawFields.forEach((field, index) => {
       names[`#proj_${index}`] = field;
     });

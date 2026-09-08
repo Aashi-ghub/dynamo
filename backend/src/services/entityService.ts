@@ -4,6 +4,7 @@ import { dynamoToFrontend, type EntityConfig } from '../config/entities.js';
 import type { BusinessRecord } from '../models/businessRecord.js';
 import type { DynamoEntityRepository } from '../repositories/dynamoEntityRepository.js';
 import type { AuthUser, ListQuery } from '../types/api.js';
+import { stripBom } from '../utils/bom.js';
 import { notFound, badRequest } from '../utils/errors.js';
 
 export class EntityService {
@@ -160,9 +161,17 @@ export class EntityService {
 
   private toFrontend(record: BusinessRecord) {
     const rawToFrontend = dynamoToFrontend(this.config);
+    // Some legacy/externally-written records store attribute names without the leading
+    // byte-order-mark this app's fieldMap expects (e.g. plain "Subscription ID" instead of
+    // "﻿Subscription ID"), which would otherwise silently drop that field on read.
+    const rawToFrontendByStrippedKey: Record<string, string> = {};
+    for (const [rawField, frontendField] of Object.entries(rawToFrontend)) {
+      rawToFrontendByStrippedKey[stripBom(rawField)] = frontendField;
+    }
+
     const transformed: Record<string, unknown> = {};
     for (const [rawField, value] of Object.entries(record)) {
-      const frontendField = rawToFrontend[rawField];
+      const frontendField = rawToFrontend[rawField] ?? rawToFrontendByStrippedKey[stripBom(rawField)];
       if (frontendField) transformed[frontendField] = value;
     }
     return transformed as BusinessRecord;
