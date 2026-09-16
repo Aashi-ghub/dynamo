@@ -24,6 +24,16 @@ const router = createRouter({
           path: 'records/:entityId/:recordId',
           name: 'RecordDetail',
           component: () => import('../pages/RecordDetailPage.vue')
+        },
+        {
+          path: 'suiteapp-metrics',
+          name: 'SuiteAppMetrics',
+          component: () => import('../pages/SuiteAppMetricsPage.vue')
+        },
+        {
+          path: 'suiteapp-metrics/:accountIdProductCode/:date',
+          name: 'SuiteAppMetricsDetail',
+          component: () => import('../pages/SuiteAppMetricsDetailPage.vue')
         }
       ]
     },

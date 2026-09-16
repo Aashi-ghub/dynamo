@@ -30,9 +30,9 @@
         <button
           v-for="entity in visibleEntities"
           :key="entity.id"
-          @click="entityStore.setActiveEntity(entity.id)"
+          @click="goToDashboard(entity.id)"
           :class="[
-            entityStore.activeEntityId === entity.id
+            isDashboardActive(entity.id)
               ? 'bg-primary-600 text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
             'flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-full transition-colors'
@@ -40,6 +40,17 @@
         >
           {{ entity.plural }}
         </button>
+        <router-link
+          :to="{ name: 'SuiteAppMetrics' }"
+          :class="[
+            isMetricsActive
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+            'flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-full transition-colors'
+          ]"
+        >
+          SuiteApp Metrics
+        </router-link>
       </div>
 
       <!-- Desktop sidebar -->
@@ -48,9 +59,9 @@
           <button
             v-for="entity in visibleEntities"
             :key="entity.id"
-            @click="entityStore.setActiveEntity(entity.id)"
+            @click="goToDashboard(entity.id)"
             :class="[
-              entityStore.activeEntityId === entity.id
+              isDashboardActive(entity.id)
                 ? 'bg-primary-50 text-primary-700 border-primary-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent',
               'group flex items-center px-3 py-2.5 text-sm font-semibold border-l-4 w-full text-left transition-colors rounded-r-md'
@@ -58,6 +69,18 @@
           >
             {{ entity.plural }}
           </button>
+          <router-link
+            :to="{ name: 'SuiteAppMetrics' }"
+            :class="[
+              isMetricsActive
+                ? 'bg-primary-50 text-primary-700 border-primary-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent',
+              'group flex items-center px-3 py-2.5 text-sm font-semibold border-l-4 w-full text-left transition-colors rounded-r-md'
+            ]"
+          >
+            SuiteApp Metrics
+            <span class="ml-auto text-[10px] font-bold tracking-wide bg-primary-600 text-white px-1.5 py-0.5 rounded-full">New</span>
+          </router-link>
         </nav>
       </aside>
 
@@ -71,14 +94,27 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/authStore';
 import { useEntityStore } from '../stores/entityStore';
 import { ENTITIES } from '../config/entities';
 
 const authStore = useAuthStore();
 const entityStore = useEntityStore();
+const route = useRoute();
+const router = useRouter();
 
 const visibleEntities = Object.values(ENTITIES).filter((e) => e.id === 'subscriptions');
+
+const isMetricsActive = computed(() => route.name === 'SuiteAppMetrics' || route.name === 'SuiteAppMetricsDetail');
+
+const isDashboardActive = (entityId: string) => !isMetricsActive.value && entityStore.activeEntityId === entityId;
+
+const goToDashboard = (entityId: string) => {
+  entityStore.setActiveEntity(entityId);
+  if (route.name !== 'Dashboard') router.push({ name: 'Dashboard' });
+};
 
 const logout = () => {
   authStore.logout();

@@ -1,12 +1,7 @@
 import { Router } from 'express';
-import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { EntityName } from '../types/api.js';
 import { createEntityController } from '../controllers/entityController.js';
-
-const asyncHandler =
-  (handler: (req: Request, res: Response, next: NextFunction) => Promise<void> | void): RequestHandler =>
-  (req, res, next) =>
-    Promise.resolve(handler(req, res, next)).catch(next);
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const entityRouter = (entityName: EntityName) => {
   const router = Router();

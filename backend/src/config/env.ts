@@ -48,6 +48,7 @@ export const env = {
     accounts: process.env.ACCOUNTS_TABLE || 'Accounts',
     contacts: process.env.CONTACTS_TABLE || 'Contacts',
     subscriptions: process.env.SUBSCRIPTIONS_TABLE || 'Subscriptions',
-    cloudFiles: process.env.CLOUD_FILES_TABLE || 'CloudFiles'
+    cloudFiles: process.env.CLOUD_FILES_TABLE || 'CloudFiles',
+    suiteAppMetrics: process.env.SUITE_APP_METRICS_TABLE || 'SuiteAppMetrics'
   }
 };

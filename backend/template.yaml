@@ -29,6 +29,9 @@ Parameters:
   CloudFilesTableName:
     Type: String
     Default: CloudFiles
+  SuiteAppMetricsTableName:
+    Type: String
+    Default: SuiteAppMetrics
   DeleteMode:
     Type: String
     AllowedValues:
@@ -56,6 +59,7 @@ Globals:
         CONTACTS_TABLE: !Ref ContactsTableName
         SUBSCRIPTIONS_TABLE: !Ref SubscriptionsTableName
         CLOUD_FILES_TABLE: !Ref CloudFilesTableName
+        SUITE_APP_METRICS_TABLE: !Ref SuiteAppMetricsTableName
         DEFAULT_PAGE_SIZE: '25'
         MAX_PAGE_SIZE: '100'
         DELETE_MODE: !Ref DeleteMode
@@ -113,6 +117,13 @@ Resources:
                 - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SubscriptionsTableName}/index/*
                 - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${CloudFilesTableName}
                 - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${CloudFilesTableName}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SuiteAppMetricsTableName}
       Events:
         Proxy:
           Type: HttpApi
