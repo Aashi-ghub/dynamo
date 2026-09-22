@@ -156,6 +156,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'subscriptionEndDate', label: 'Subscription End Date', type: 'date' },
       { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID' },
       { key: 'price', label: 'Price', type: 'number' },
+      { key: 'priceUsd', label: 'Price USD', type: 'number' },
       { key: 'transaction', label: 'Transaction' }
     ],
     fields: [
@@ -169,7 +170,15 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'clientNotificationsSuiteletUrl', label: 'Client Notifications Suitelet URL', type: 'text' },
       { key: 'clientPointOfContact', label: 'Client Point Of Contact', type: 'text' },
       { key: 'contractType', label: 'Contract Type', type: 'text' },
-      { key: 'deactivateSubscription', label: 'Deactivate subscription', type: 'boolean' },
+      {
+        key: 'deactivateSubscription',
+        label: 'Deactivate subscription',
+        type: 'boolean',
+        options: [
+          { label: 'Active', value: 'false' },
+          { label: 'Expired', value: 'true' }
+        ]
+      },
       { key: 'endOfTrialPeriod', label: 'End Of Trial Period', type: 'date' },
       { key: 'freeTrialSignupCompany', label: 'Free Trial Signup Company', type: 'text' },
       { key: 'freeTrialSignupEmailAddress', label: 'Free Trial Signup Email Address', type: 'email' },
@@ -205,7 +214,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { key: 'subscriptionId', label: 'Subscription ID' },
       { key: 'clientNetSuiteAccountId', label: 'Client NetSuite Account ID' }
     ],
-    filters: { status: 'status', date: 'subscriptionPeriod' },
+    filters: { status: 'deactivateSubscription', date: 'subscriptionPeriod' },
     sortableFields: ['subscriptionStartDate'],
     historyConfig: {
       field: 'subscriptionHistory',

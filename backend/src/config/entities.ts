@@ -235,7 +235,7 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
       subscriptionId: 'subscription-id-index',
       clientNetSuiteAccountId: 'client-netsuite-account-id-index'
     },
-    filterableFields: ['status', 'customer', 'subscriptionPeriod'],
+    filterableFields: ['deactivateSubscription', 'customer', 'subscriptionPeriod'],
     periodFilter: { field: 'subscriptionPeriod', startField: 'subscriptionEndDate', endField: 'subscriptionEndDate' },
     historyTracking: {
       historyField: 'subscriptionHistory',
@@ -245,7 +245,7 @@ export const entityConfigs: Record<EntityName, EntityConfig> = {
     },
     sortableFields: { subscriptionStartDate: 'subscription-start-date-index' },
     defaultSortField: 'subscriptionStartDate',
-    listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'dateCreated', 'subscriptionStartDate', 'nextBillDate', 'subscriptionEndDate', 'transaction'],
+    listAttributes: ['subscriptionId', 'clientNetSuiteAccountId', 'productCode', 'customer', 'product', 'status', 'billingFrequency', 'price', 'priceUsd', 'salesRep', 'dateCreated', 'subscriptionStartDate', 'nextBillDate', 'subscriptionEndDate', 'transaction'],
     detailAttributes: Object.keys(subscriptionFieldMap),
     searchIndexes: {
       customer: { indexName: 'customer-index', partitionKey: 'Customer' },
